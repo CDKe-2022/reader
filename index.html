@@ -3,9 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>极简阅读器 </title>
+<title>极简阅读器</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F4F1EA">
+
+<!-- 修复 FOUC (白屏闪烁)：在 DOM 渲染前提前应用主题 -->
+<script>
+  (function() {
+    try {
+      const settings = JSON.parse(localStorage.getItem('reader_settings_v13') || '{"theme":"default"}');
+      const theme = settings.theme || 'default';
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch(e) {}
+  })();
+</script>
+
 <style>
 :root { --sat: env(safe-area-inset-top); --sab: env(safe-area-inset-bottom); --header-h: 56px; --content-max-w: 720px; --bg: #F4F1EA; --text: #2D2D2D; --text-secondary: #888888; --card: rgba(255,255,255,0.5); --border: rgba(0,0,0,0.04); --accent: #9C8163; --header-bg: rgba(244, 241, 234, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
 [data-theme="white"] { --bg: #FFFFFF; --text: #1A1A1A; --card: rgba(0,0,0,0.02); --border: rgba(0,0,0,0.06); --accent: #0055A4; --header-bg: rgba(255, 255, 255, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
@@ -105,7 +117,7 @@ body.ui-visible #header { transform: translateY(0); }
 }
 </style>
 </head>
-<body data-theme="default">
+<body>
 
 <div id="loading-mask" class="hidden"><div class="loading-spinner"></div><div id="loading-text">正在解析书籍...</div></div>
 <div id="bookshelf" class="page">
@@ -150,7 +162,8 @@ const API = {
     async getBookMeta(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}`)).json(); },
     async getBookContent(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}/content`)).text(); },
     async createBook(d) { return (await fetch('/api/books', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) })).json(); },
-    async updateProgress(id, d) { return (await fetch(`/api/books/${encodeURIComponent(id)}/progress`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) })).json(); },
+    // 修复：添加 keepalive: true，防止页面关闭时进度保存请求被浏览器取消
+    async updateProgress(id, d) { return (await fetch(`/api/books/${encodeURIComponent(id)}/progress`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d), keepalive: true })).json(); },
     async deleteBook(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}`, { method:'DELETE' })).json(); }
 };
 
@@ -235,12 +248,13 @@ const DataManager = {
 // ================= 4. Web Worker =================
 function parseTextAsync(text, fileName) {
     return new Promise((resolve, reject) => {
+        // 修复：修正正则表达式的转义层级，确保 Worker 接收到的是正确的 \s 和 \r?\n
         const workerScript = `
-            const CHAPTER_REGEX = /^\\\\s*(第[零一二三四五六七八九十百千万0-9]+[章节回部集卷][^。\\\\n]{0,15}?)\\\\s*$/i;
+            const CHAPTER_REGEX = /^\\s*(第[零一二三四五六七八九十百千万0-9]+[章节回部集卷][^。\\n]{0,15}?)\\s*$/i;
             self.onmessage = function(e) {
                 const { text, fileName } = e.data;
                 try {
-                    const lines = text.split(/\\\\r?\\\\n/);
+                    const lines = text.split(/\\r?\\n/);
                     const paragraphs = []; const chMap = []; let currentChapterIdx = -1;
                     for (let i = 0; i < lines.length; i++) {
                         const trimmed = lines[i].trim(); if (!trimmed) continue;
@@ -255,7 +269,7 @@ function parseTextAsync(text, fileName) {
                             paragraphs.push({ type: 'p', text: trimmed, chapterIdx: currentChapterIdx, globalIdx: gIdx });
                         }
                     }
-                    self.postMessage({ success: true, paragraphs, chMap, bookName: fileName.replace(/\\\\.(txt|TXT)$/i, '') });
+                    self.postMessage({ success: true, paragraphs, chMap, bookName: fileName.replace(/\\.(txt|TXT)$/i, '') });
                 } catch (err) { self.postMessage({ success: false, error: err.message }); }
             };`;
         const blob = new Blob([workerScript], { type: 'application/javascript' });
@@ -280,16 +294,20 @@ function createNode(para, gIdx) {
     el.textContent = para.text; el.dataset.gidx = gIdx; el.dataset.cidx = para.chapterIdx;
     return el;
 }
+
 function setupVirtualScroll() {
     if (obsTop) obsTop.disconnect(); if (obsBot) obsBot.disconnect();
     let sTop = document.getElementById('sentinel-top'); let sBot = document.getElementById('sentinel-bottom');
     if (!sTop) { sTop = document.createElement('div'); sTop.id = 'sentinel-top'; sTop.style.height = '1px'; contentWrapper.prepend(sTop); }
     if (!sBot) { sBot = document.createElement('div'); sBot.id = 'sentinel-bottom'; sBot.style.height = '1px'; contentWrapper.appendChild(sBot); }
-    obsBot = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && windowEnd < DataManager.totalParagraphs - 1) loadMore('bottom'); }, { root: readerEl, rootMargin: '500px' });
+    
+    // 修复：将 rootMargin 改为百分比，更好适配移动端不同屏幕尺寸
+    obsBot = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && windowEnd < DataManager.totalParagraphs - 1) loadMore('bottom'); }, { root: readerEl, rootMargin: '150%' });
     obsBot.observe(sBot);
-    obsTop = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && windowStart > 0) loadMore('top'); }, { root: readerEl, rootMargin: '500px' });
+    obsTop = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && windowStart > 0) loadMore('top'); }, { root: readerEl, rootMargin: '150%' });
     obsTop.observe(sTop);
 }
+
 function loadMore(direction) {
     if (direction === 'bottom') {
         const newEnd = Math.min(DataManager.totalParagraphs - 1, windowEnd + BUFFER_SIZE);
@@ -302,22 +320,45 @@ function loadMore(direction) {
         if (newStart === windowStart) return;
         const f = document.createDocumentFragment();
         DataManager._localParagraphs.slice(newStart, windowStart).forEach((p, i) => f.appendChild(createNode(p, newStart + i)));
+        
+        const sTop = document.getElementById('sentinel-top');
         const oldScrollHeight = contentWrapper.scrollHeight;
-        contentWrapper.insertBefore(f, document.getElementById('sentinel-top').nextSibling); windowStart = newStart;
-        requestAnimationFrame(() => { readerEl.scrollTop += (contentWrapper.scrollHeight - oldScrollHeight); });
+        contentWrapper.insertBefore(f, sTop.nextSibling); 
+        windowStart = newStart;
+        
+        // 修复：改为同步修改 scrollTop，避免 requestAnimationFrame 带来的高频抖动
+        readerEl.scrollTop += (contentWrapper.scrollHeight - oldScrollHeight);
     }
     cleanUpDOM();
 }
+
 function cleanUpDOM() {
-    while (contentWrapper.children.length > 0) {
-        const node = contentWrapper.children[1]; if (!node || node.id === 'sentinel-bottom') break;
-        if (parseInt(node.dataset.gidx) < windowStart) contentWrapper.removeChild(node); else break;
+    // 修复：使用 nextSibling/previousSibling 安全遍历，替代脆弱的 children[1] 硬编码索引
+    let sTop = document.getElementById('sentinel-top');
+    let node = sTop ? sTop.nextSibling : contentWrapper.firstChild;
+    while (node && node.id !== 'sentinel-bottom') {
+        if (parseInt(node.dataset.gidx) < windowStart) {
+            let next = node.nextSibling;
+            contentWrapper.removeChild(node);
+            node = next;
+        } else {
+            break;
+        }
     }
-    while (contentWrapper.children.length > 0) {
-        const node = contentWrapper.children[contentWrapper.children.length - 2]; if (!node || node.id === 'sentinel-top') break;
-        if (parseInt(node.dataset.gidx) > windowEnd) contentWrapper.removeChild(node); else break;
+    
+    let sBot = document.getElementById('sentinel-bottom');
+    node = sBot ? sBot.previousSibling : contentWrapper.lastChild;
+    while (node && node.id !== 'sentinel-top') {
+        if (parseInt(node.dataset.gidx) > windowEnd) {
+            let prev = node.previousSibling;
+            contentWrapper.removeChild(node);
+            node = prev;
+        } else {
+            break;
+        }
     }
 }
+
 function teleportTo(centerIdx) {
     const newStart = Math.max(0, centerIdx - BUFFER_SIZE); const newEnd = Math.min(DataManager.totalParagraphs - 1, centerIdx + BUFFER_SIZE);
     contentWrapper.innerHTML = '';
@@ -348,6 +389,7 @@ function updateHeader(cIdx) {
     document.getElementById('header-title').textContent = ch ? ch.title : '阅读中';
     document.querySelectorAll('#toc-list .item').forEach((el, i) => el.classList.toggle('active', i === cIdx));
 }
+
 async function jumpToChapter(cIdx) {
     const ch = DataManager.chMap.find(c => c.chapterIdx === cIdx); if (!ch) return;
     teleportTo(ch.globalIdx);
@@ -368,6 +410,7 @@ contentWrapper.addEventListener('click', e => {
     else if (clickX > width * 0.7) jumpToChapter(currentChapterIdx + 1);
     else toggleUI();
 });
+
 document.addEventListener('keydown', e => {
     if (document.getElementById('reader').classList.contains('hidden')) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -379,6 +422,7 @@ document.addEventListener('keydown', e => {
         case 'Escape': closeDrawers(); document.body.classList.remove('ui-visible'); break;
     }
 });
+
 function toggleUI() { document.body.classList.toggle('ui-visible'); }
 function openDrawer(id) {
     document.getElementById('overlay').classList.add('active'); document.getElementById(id).classList.add('active');
@@ -396,6 +440,7 @@ function updateNightModeIcon() {
         ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
         : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
 }
+
 let settings = JSON.parse(localStorage.getItem('reader_settings_v13') || '{"fontSize":18,"lineHeight":1.9,"theme":"default","previousTheme":"default"}');
 function applySettings() {
     document.body.dataset.theme = settings.theme;
@@ -405,6 +450,7 @@ function applySettings() {
     document.querySelectorAll('[data-line]').forEach(el => el.classList.toggle('active', parseFloat(el.dataset.line) === settings.lineHeight));
     updateNightModeIcon(); localStorage.setItem('reader_settings_v13', JSON.stringify(settings));
 }
+
 document.getElementById('btn-night-mode').onclick = () => {
     settings.theme = settings.theme === 'dark' ? (settings.previousTheme || 'default') : 'dark';
     if (settings.theme !== 'dark') settings.previousTheme = settings.theme; applySettings();
@@ -430,6 +476,14 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 window.addEventListener('beforeunload', () => { saveProgress(true); });
 
 // ================= 9. 书架与导入 =================
+// 修复：新增 XSS 防御函数
+function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/[&<>"']/g, function(m) {
+        return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m];
+    });
+}
+
 const importBtn = document.getElementById('import-btn');
 const loadingMask = document.getElementById('loading-mask');
 const loadingText = document.getElementById('loading-text');
@@ -456,20 +510,20 @@ async function renderBookList() {
         const currentTitle = chMap[currentChIdx] ? chMap[currentChIdx].title : '未知';
 
         return `
-        <div class="book-item" data-id="${b.id}">
+        <div class="book-item" data-id="${escapeHtml(b.id)}">
             <div class="book-main">
-                <div class="book-name">${b.name}</div>
+                <div class="book-name">${escapeHtml(b.name)}</div>
                 <div class="progress-info">
-                    <span class="progress-text">${currentTitle} · ${readChapters}/${totalChapters}章 (${progressPercent}%)</span>
+                    <span class="progress-text">${escapeHtml(currentTitle)} · ${readChapters}/${totalChapters}章 (${progressPercent}%)</span>
                     <div class="progress-bar"><div class="progress-fill" style="width: ${progressPercent}%"></div></div>
                 </div>
             </div>
             <div class="book-actions">
-                <button class="btn-read" onclick="openBook('${b.id}')">阅读</button>
-                <button class="btn-icon-action" onclick="refreshBook('${b.id}')" title="刷新缓存">
+                <button class="btn-read" onclick="openBook('${escapeHtml(b.id)}')">阅读</button>
+                <button class="btn-icon-action" onclick="refreshBook('${escapeHtml(b.id)}')" title="刷新缓存">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                 </button>
-                <button class="btn-icon-action btn-delete" onclick="deleteBook('${b.id}')" title="删除">
+                <button class="btn-icon-action btn-delete" onclick="deleteBook('${escapeHtml(b.id)}')" title="删除">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
             </div>
@@ -496,8 +550,11 @@ window.openBook = async function(id) {
         document.getElementById('reader').classList.remove('hidden');
         contentWrapper.innerHTML = ''; windowStart = 0; windowEnd = 0;
         renderTocList();
-        currentGlobalIdx = meta.progress_gidx || 0;
+        
+        // 修复：增加 Math.min 边界保护，防止进度越界导致崩溃
+        currentGlobalIdx = Math.min(meta.progress_gidx || 0, DataManager.totalParagraphs - 1);
         currentChapterIdx = DataManager.getChapterByGlobalIdx(currentGlobalIdx).chapterIdx;
+        
         teleportTo(currentGlobalIdx); updateHeader(currentChapterIdx); applySettings();
         setTimeout(() => { 
             if (meta.scroll_top > 0) readerEl.scrollTop = meta.scroll_top;
@@ -534,7 +591,7 @@ document.getElementById('file-input').onchange = async (e) => {
 };
 
 document.getElementById('toc-list').onclick = (e) => { const item = e.target.closest('.item'); if (item) jumpToChapter(parseInt(item.dataset.cidx)); };
-function renderTocList() { document.getElementById('toc-list').innerHTML = DataManager.chMap.map(ch => `<div class="item" data-cidx="${ch.chapterIdx}">${ch.title}</div>`).join(''); }
+function renderTocList() { document.getElementById('toc-list').innerHTML = DataManager.chMap.map(ch => `<div class="item" data-cidx="${ch.chapterIdx}">${escapeHtml(ch.title)}</div>`).join(''); }
 
 // ================= 10. 初始化 =================
 (async function() { await LocalCache.init(); applySettings(); renderBookList(); })();
