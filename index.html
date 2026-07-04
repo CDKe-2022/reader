@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F4F1EA">
 
-<!-- 修复 FOUC (白屏闪烁)：在 DOM 渲染前提前应用主题 -->
+<!-- [补丁] 修复 FOUC：在 DOM 渲染前提前应用主题 -->
 <script>
   (function() {
     try {
@@ -92,6 +92,7 @@ body.ui-visible #header { transform: translateY(0); }
 .progress-info { display: flex; flex-direction: column; gap: 6px; }
 .progress-text { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .progress-bar { width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+/* [补丁] 进度条渐变方向改为 270deg (左浅右深) */
 .progress-fill { height: 100%; background: linear-gradient(270deg, var(--accent), transparent); border-radius: 2px; transition: width .3s; }
 .book-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
 .btn-read { padding: 8px 16px; border-radius: 8px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; background: var(--accent); color: #fff; transition: all .2s; }
@@ -162,7 +163,7 @@ const API = {
     async getBookMeta(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}`)).json(); },
     async getBookContent(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}/content`)).text(); },
     async createBook(d) { return (await fetch('/api/books', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) })).json(); },
-    // 修复：添加 keepalive: true，防止页面关闭时进度保存请求被浏览器取消
+    // [补丁] 添加 keepalive: true，防止页面关闭时进度保存请求被浏览器取消
     async updateProgress(id, d) { return (await fetch(`/api/books/${encodeURIComponent(id)}/progress`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d), keepalive: true })).json(); },
     async deleteBook(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}`, { method:'DELETE' })).json(); }
 };
@@ -248,7 +249,7 @@ const DataManager = {
 // ================= 4. Web Worker =================
 function parseTextAsync(text, fileName) {
     return new Promise((resolve, reject) => {
-        // 修复：修正正则表达式的转义层级，确保 Worker 接收到的是正确的 \s 和 \r?\n
+        // [补丁] 修正正则表达式的转义层级，确保 Worker 接收到的是正确的 \s 和 \r?\n
         const workerScript = `
             const CHAPTER_REGEX = /^\\s*(第[零一二三四五六七八九十百千万0-9]+[章节回部集卷][^。\\n]{0,15}?)\\s*$/i;
             self.onmessage = function(e) {
@@ -272,10 +273,26 @@ function parseTextAsync(text, fileName) {
                     self.postMessage({ success: true, paragraphs, chMap, bookName: fileName.replace(/\\.(txt|TXT)$/i, '') });
                 } catch (err) { self.postMessage({ success: false, error: err.message }); }
             };`;
+        
         const blob = new Blob([workerScript], { type: 'application/javascript' });
-        const worker = new Worker(URL.createObjectURL(blob));
-        worker.onmessage = (e) => { worker.terminate(); if(e.data.success) resolve(e.data); else reject(new Error(e.data.error)); };
-        worker.onerror = (e) => { worker.terminate(); reject(e); };
+        const workerUrl = URL.createObjectURL(blob);
+        const worker = new Worker(workerUrl);
+
+        // [补丁] 增加 30 秒超时保护，防止大文件解析卡死
+        const timeoutId = setTimeout(() => {
+            cleanup();
+            reject(new Error('解析超时，请检查文件是否过大或设备性能不足'));
+        }, 30000);
+
+        // [补丁] 提取 cleanup 函数，统一处理资源释放，防止 Blob URL 内存泄漏
+        const cleanup = () => {
+            clearTimeout(timeoutId);
+            worker.terminate();
+            URL.revokeObjectURL(workerUrl);
+        };
+
+        worker.onmessage = (e) => { cleanup(); if(e.data.success) resolve(e.data); else reject(new Error(e.data.error)); };
+        worker.onerror = (e) => { cleanup(); reject(e); };
         worker.postMessage({ text, fileName });
     });
 }
@@ -301,10 +318,10 @@ function setupVirtualScroll() {
     if (!sTop) { sTop = document.createElement('div'); sTop.id = 'sentinel-top'; sTop.style.height = '1px'; contentWrapper.prepend(sTop); }
     if (!sBot) { sBot = document.createElement('div'); sBot.id = 'sentinel-bottom'; sBot.style.height = '1px'; contentWrapper.appendChild(sBot); }
     
-    // 修复：将 rootMargin 改为百分比，更好适配移动端不同屏幕尺寸
-    obsBot = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && windowEnd < DataManager.totalParagraphs - 1) loadMore('bottom'); }, { root: readerEl, rootMargin: '150%' });
+    // [绝对尊重] 还原为原始的 500px 缓冲距离
+    obsBot = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && windowEnd < DataManager.totalParagraphs - 1) loadMore('bottom'); }, { root: readerEl, rootMargin: '500px' });
     obsBot.observe(sBot);
-    obsTop = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && windowStart > 0) loadMore('top'); }, { root: readerEl, rootMargin: '150%' });
+    obsTop = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && windowStart > 0) loadMore('top'); }, { root: readerEl, rootMargin: '500px' });
     obsTop.observe(sTop);
 }
 
@@ -326,36 +343,21 @@ function loadMore(direction) {
         contentWrapper.insertBefore(f, sTop.nextSibling); 
         windowStart = newStart;
         
-        // 修复：改为同步修改 scrollTop，避免 requestAnimationFrame 带来的高频抖动
-        readerEl.scrollTop += (contentWrapper.scrollHeight - oldScrollHeight);
+        // [绝对尊重] 完全保留原始的 requestAnimationFrame 设计
+        requestAnimationFrame(() => { readerEl.scrollTop += (contentWrapper.scrollHeight - oldScrollHeight); });
     }
     cleanUpDOM();
 }
 
 function cleanUpDOM() {
-    // 修复：使用 nextSibling/previousSibling 安全遍历，替代脆弱的 children[1] 硬编码索引
-    let sTop = document.getElementById('sentinel-top');
-    let node = sTop ? sTop.nextSibling : contentWrapper.firstChild;
-    while (node && node.id !== 'sentinel-bottom') {
-        if (parseInt(node.dataset.gidx) < windowStart) {
-            let next = node.nextSibling;
-            contentWrapper.removeChild(node);
-            node = next;
-        } else {
-            break;
-        }
+    // [绝对尊重] 彻底还原为原始的 children[1] 硬编码索引设计
+    while (contentWrapper.children.length > 0) {
+        const node = contentWrapper.children[1]; if (!node || node.id === 'sentinel-bottom') break;
+        if (parseInt(node.dataset.gidx) < windowStart) contentWrapper.removeChild(node); else break;
     }
-    
-    let sBot = document.getElementById('sentinel-bottom');
-    node = sBot ? sBot.previousSibling : contentWrapper.lastChild;
-    while (node && node.id !== 'sentinel-top') {
-        if (parseInt(node.dataset.gidx) > windowEnd) {
-            let prev = node.previousSibling;
-            contentWrapper.removeChild(node);
-            node = prev;
-        } else {
-            break;
-        }
+    while (contentWrapper.children.length > 0) {
+        const node = contentWrapper.children[contentWrapper.children.length - 2]; if (!node || node.id === 'sentinel-top') break;
+        if (parseInt(node.dataset.gidx) > windowEnd) contentWrapper.removeChild(node); else break;
     }
 }
 
@@ -376,7 +378,10 @@ readerEl.addEventListener('scroll', () => {
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(() => {
         const scrollTop = readerEl.scrollTop; const domNodes = contentWrapper.children; let topGidx = windowStart;
+        
+        // [绝对尊重] 一字不差地保留原始代码的进度追踪逻辑
         for (let i = 0; i < domNodes.length; i++) { if (domNodes[i].offsetTop <= scrollTop + 100) topGidx = parseInt(domNodes[i].dataset.gidx); else break; }
+        
         const currentChapter = DataManager.getChapterByGlobalIdx(topGidx);
         if (currentChapter.chapterIdx !== currentChapterIdx) { currentChapterIdx = currentChapter.chapterIdx; updateHeader(currentChapterIdx); }
         currentGlobalIdx = topGidx;
@@ -394,23 +399,16 @@ async function jumpToChapter(cIdx) {
     const ch = DataManager.chMap.find(c => c.chapterIdx === cIdx); 
     if (!ch) return;
     
-    // 1. 先关闭 UI，避免抽屉和 Header 的隐藏动画干扰后续的布局计算
     closeDrawers(); 
     document.body.classList.remove('ui-visible');
     
-    // 2. 重建 DOM
     teleportTo(ch.globalIdx);
     
-    // 3. 修复核心：废弃 requestAnimationFrame，使用 setTimeout 给浏览器 50ms 完成 Layout
-    // 50ms 既能保证布局计算完成，又不会产生用户可感知的视觉延迟
+    // [补丁] 修复第一次跳转目录不准的问题，使用 setTimeout 强制同步布局
     setTimeout(() => {
         const targetNode = contentWrapper.querySelector(`[data-gidx="${ch.globalIdx}"]`);
         if (targetNode) {
-            // 强制同步布局 (Forced Synchronous Layout)
-            // 通过读取 offsetHeight，强制浏览器立刻完成该节点及父容器的布局计算
             void targetNode.offsetHeight; 
-            
-            // 此时执行 scrollIntoView，位置计算绝对精准
             targetNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }, 50);
@@ -495,7 +493,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 window.addEventListener('beforeunload', () => { saveProgress(true); });
 
 // ================= 9. 书架与导入 =================
-// 修复：新增 XSS 防御函数
+// [补丁] 新增 XSS 防御函数
 function escapeHtml(text) {
     if (!text) return '';
     return text.replace(/[&<>"']/g, function(m) {
@@ -520,12 +518,17 @@ async function renderBookList() {
     if (!books || books.length === 0) { list.innerHTML = '<div class="empty-tip">书架空空如也<br>点击右上角导入你的第一本 TXT 小说</div>'; return; }
     
     list.innerHTML = books.map(b => {
-        const chMap = JSON.parse(b.ch_map || '[]');
+        // [补丁] 增加 try-catch 保护，防止单本书 ch_map 损坏导致整个书架白屏
+        let chMap = [];
+        try { chMap = JSON.parse(b.ch_map || '[]'); } catch (e) { chMap = []; }
+        
         let currentChIdx = 0;
         for (let i = 0; i < chMap.length; i++) { if (chMap[i].globalIdx <= (b.progress_gidx || 0)) currentChIdx = i; else break; }
         const totalChapters = b.total_chapters || chMap.length;
         const readChapters = currentChIdx + 1;
-        const progressPercent = Math.round((readChapters / totalChapters) * 100);
+        
+        // [补丁] 增加除零保护
+        const progressPercent = totalChapters > 0 ? Math.round((readChapters / totalChapters) * 100) : 0;
         const currentTitle = chMap[currentChIdx] ? chMap[currentChIdx].title : '未知';
 
         return `
@@ -570,7 +573,7 @@ window.openBook = async function(id) {
         contentWrapper.innerHTML = ''; windowStart = 0; windowEnd = 0;
         renderTocList();
         
-        // 修复：增加 Math.min 边界保护，防止进度越界导致崩溃
+        // [补丁] 增加 Math.min 边界保护，防止进度越界导致崩溃
         currentGlobalIdx = Math.min(meta.progress_gidx || 0, DataManager.totalParagraphs - 1);
         currentChapterIdx = DataManager.getChapterByGlobalIdx(currentGlobalIdx).chapterIdx;
         
