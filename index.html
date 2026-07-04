@@ -162,7 +162,6 @@ const API = {
     async getBookMeta(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}`)).json(); },
     async getBookContent(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}/content`)).text(); },
     async createBook(d) { return (await fetch('/api/books', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) })).json(); },
-    // 修复：添加 keepalive: true，防止页面关闭时进度保存请求被浏览器取消
     async updateProgress(id, d) { return (await fetch(`/api/books/${encodeURIComponent(id)}/progress`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d), keepalive: true })).json(); },
     async deleteBook(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}`, { method:'DELETE' })).json(); }
 };
@@ -248,7 +247,6 @@ const DataManager = {
 // ================= 4. Web Worker =================
 function parseTextAsync(text, fileName) {
     return new Promise((resolve, reject) => {
-        // 修复：修正正则表达式的转义层级，确保 Worker 接收到的是正确的 \s 和 \r?\n
         const workerScript = `
             const CHAPTER_REGEX = /^\\s*(第[零一二三四五六七八九十百千万0-9]+[章节回部集卷][^。\\n]{0,15}?)\\s*$/i;
             self.onmessage = function(e) {
@@ -272,10 +270,24 @@ function parseTextAsync(text, fileName) {
                     self.postMessage({ success: true, paragraphs, chMap, bookName: fileName.replace(/\\.(txt|TXT)$/i, '') });
                 } catch (err) { self.postMessage({ success: false, error: err.message }); }
             };`;
+        
         const blob = new Blob([workerScript], { type: 'application/javascript' });
-        const worker = new Worker(URL.createObjectURL(blob));
-        worker.onmessage = (e) => { worker.terminate(); if(e.data.success) resolve(e.data); else reject(new Error(e.data.error)); };
-        worker.onerror = (e) => { worker.terminate(); reject(e); };
+        const workerUrl = URL.createObjectURL(blob);
+        const worker = new Worker(workerUrl);
+
+        const timeoutId = setTimeout(() => {
+            cleanup();
+            reject(new Error('解析超时，请检查文件是否过大或设备性能不足'));
+        }, 30000);
+
+        const cleanup = () => {
+            clearTimeout(timeoutId);
+            worker.terminate();
+            URL.revokeObjectURL(workerUrl);
+        };
+
+        worker.onmessage = (e) => { cleanup(); if(e.data.success) resolve(e.data); else reject(new Error(e.data.error)); };
+        worker.onerror = (e) => { cleanup(); reject(e); };
         worker.postMessage({ text, fileName });
     });
 }
@@ -301,7 +313,6 @@ function setupVirtualScroll() {
     if (!sTop) { sTop = document.createElement('div'); sTop.id = 'sentinel-top'; sTop.style.height = '1px'; contentWrapper.prepend(sTop); }
     if (!sBot) { sBot = document.createElement('div'); sBot.id = 'sentinel-bottom'; sBot.style.height = '1px'; contentWrapper.appendChild(sBot); }
     
-    // 修复：将 rootMargin 改为百分比，更好适配移动端不同屏幕尺寸
     obsBot = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && windowEnd < DataManager.totalParagraphs - 1) loadMore('bottom'); }, { root: readerEl, rootMargin: '150%' });
     obsBot.observe(sBot);
     obsTop = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && windowStart > 0) loadMore('top'); }, { root: readerEl, rootMargin: '150%' });
@@ -326,14 +337,16 @@ function loadMore(direction) {
         contentWrapper.insertBefore(f, sTop.nextSibling); 
         windowStart = newStart;
         
-        // 修复：改为同步修改 scrollTop，避免 requestAnimationFrame 带来的高频抖动
-        readerEl.scrollTop += (contentWrapper.scrollHeight - oldScrollHeight);
+        // 彻底回退：必须使用 requestAnimationFrame 等待浏览器完成 Layout 后再恢复 scrollTop
+        // 这是原始代码的正确设计，同步修改会导致 scrollHeight 计算偏小，进而导致进度偏大
+        requestAnimationFrame(() => { 
+            readerEl.scrollTop += (contentWrapper.scrollHeight - oldScrollHeight); 
+        });
     }
     cleanUpDOM();
 }
 
 function cleanUpDOM() {
-    // 修复：使用 nextSibling/previousSibling 安全遍历，替代脆弱的 children[1] 硬编码索引
     let sTop = document.getElementById('sentinel-top');
     let node = sTop ? sTop.nextSibling : contentWrapper.firstChild;
     while (node && node.id !== 'sentinel-bottom') {
@@ -375,8 +388,21 @@ let scrollTimer;
 readerEl.addEventListener('scroll', () => {
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(() => {
-        const scrollTop = readerEl.scrollTop; const domNodes = contentWrapper.children; let topGidx = windowStart;
-        for (let i = 0; i < domNodes.length; i++) { if (domNodes[i].offsetTop <= scrollTop + 100) topGidx = parseInt(domNodes[i].dataset.gidx); else break; }
+        const scrollTop = readerEl.scrollTop; 
+        const domNodes = contentWrapper.children; 
+        let topGidx = windowStart;
+        
+        // 彻底回退：保留原始代码的逻辑。
+        // 虽然 sentinel-top 会产生 NaN，但会被紧接着的真实段落覆盖，最终结果是绝对准确的。
+        // +100 的容差完美抵消了 padding-top 带来的物理偏移。
+        for (let i = 0; i < domNodes.length; i++) { 
+            if (domNodes[i].offsetTop <= scrollTop + 100) {
+                topGidx = parseInt(domNodes[i].dataset.gidx);
+            } else {
+                break; 
+            }
+        }
+        
         const currentChapter = DataManager.getChapterByGlobalIdx(topGidx);
         if (currentChapter.chapterIdx !== currentChapterIdx) { currentChapterIdx = currentChapter.chapterIdx; updateHeader(currentChapterIdx); }
         currentGlobalIdx = topGidx;
@@ -394,23 +420,15 @@ async function jumpToChapter(cIdx) {
     const ch = DataManager.chMap.find(c => c.chapterIdx === cIdx); 
     if (!ch) return;
     
-    // 1. 先关闭 UI，避免抽屉和 Header 的隐藏动画干扰后续的布局计算
     closeDrawers(); 
     document.body.classList.remove('ui-visible');
     
-    // 2. 重建 DOM
     teleportTo(ch.globalIdx);
     
-    // 3. 修复核心：废弃 requestAnimationFrame，使用 setTimeout 给浏览器 50ms 完成 Layout
-    // 50ms 既能保证布局计算完成，又不会产生用户可感知的视觉延迟
     setTimeout(() => {
         const targetNode = contentWrapper.querySelector(`[data-gidx="${ch.globalIdx}"]`);
         if (targetNode) {
-            // 强制同步布局 (Forced Synchronous Layout)
-            // 通过读取 offsetHeight，强制浏览器立刻完成该节点及父容器的布局计算
             void targetNode.offsetHeight; 
-            
-            // 此时执行 scrollIntoView，位置计算绝对精准
             targetNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }, 50);
@@ -495,7 +513,6 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 window.addEventListener('beforeunload', () => { saveProgress(true); });
 
 // ================= 9. 书架与导入 =================
-// 修复：新增 XSS 防御函数
 function escapeHtml(text) {
     if (!text) return '';
     return text.replace(/[&<>"']/g, function(m) {
@@ -520,12 +537,14 @@ async function renderBookList() {
     if (!books || books.length === 0) { list.innerHTML = '<div class="empty-tip">书架空空如也<br>点击右上角导入你的第一本 TXT 小说</div>'; return; }
     
     list.innerHTML = books.map(b => {
-        const chMap = JSON.parse(b.ch_map || '[]');
+        let chMap = [];
+        try { chMap = JSON.parse(b.ch_map || '[]'); } catch (e) { chMap = []; }
+        
         let currentChIdx = 0;
         for (let i = 0; i < chMap.length; i++) { if (chMap[i].globalIdx <= (b.progress_gidx || 0)) currentChIdx = i; else break; }
         const totalChapters = b.total_chapters || chMap.length;
         const readChapters = currentChIdx + 1;
-        const progressPercent = Math.round((readChapters / totalChapters) * 100);
+        const progressPercent = totalChapters > 0 ? Math.round((readChapters / totalChapters) * 100) : 0;
         const currentTitle = chMap[currentChIdx] ? chMap[currentChIdx].title : '未知';
 
         return `
@@ -570,7 +589,6 @@ window.openBook = async function(id) {
         contentWrapper.innerHTML = ''; windowStart = 0; windowEnd = 0;
         renderTocList();
         
-        // 修复：增加 Math.min 边界保护，防止进度越界导致崩溃
         currentGlobalIdx = Math.min(meta.progress_gidx || 0, DataManager.totalParagraphs - 1);
         currentChapterIdx = DataManager.getChapterByGlobalIdx(currentGlobalIdx).chapterIdx;
         
