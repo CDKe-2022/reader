@@ -391,10 +391,29 @@ function updateHeader(cIdx) {
 }
 
 async function jumpToChapter(cIdx) {
-    const ch = DataManager.chMap.find(c => c.chapterIdx === cIdx); if (!ch) return;
+    const ch = DataManager.chMap.find(c => c.chapterIdx === cIdx); 
+    if (!ch) return;
+    
+    // 1. 先关闭 UI，避免抽屉和 Header 的隐藏动画干扰后续的布局计算
+    closeDrawers(); 
+    document.body.classList.remove('ui-visible');
+    
+    // 2. 重建 DOM
     teleportTo(ch.globalIdx);
-    requestAnimationFrame(() => { const targetNode = contentWrapper.querySelector(`[data-gidx="${ch.globalIdx}"]`); if (targetNode) targetNode.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
-    closeDrawers(); document.body.classList.remove('ui-visible');
+    
+    // 3. 修复核心：废弃 requestAnimationFrame，使用 setTimeout 给浏览器 50ms 完成 Layout
+    // 50ms 既能保证布局计算完成，又不会产生用户可感知的视觉延迟
+    setTimeout(() => {
+        const targetNode = contentWrapper.querySelector(`[data-gidx="${ch.globalIdx}"]`);
+        if (targetNode) {
+            // 强制同步布局 (Forced Synchronous Layout)
+            // 通过读取 offsetHeight，强制浏览器立刻完成该节点及父容器的布局计算
+            void targetNode.offsetHeight; 
+            
+            // 此时执行 scrollIntoView，位置计算绝对精准
+            targetNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 50);
 }
 
 // ================= 7. 交互与设置 =================
