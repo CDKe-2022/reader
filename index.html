@@ -7,7 +7,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F4F1EA">
 
-<!-- 修复 FOUC (白屏闪烁)：在 DOM 渲染前提前应用主题 -->
 <script>
   (function() {
     try {
@@ -74,7 +73,7 @@ body.ui-visible #header { transform: translateY(0); }
 .theme-dot[data-t="sepia"] { background: #f4ecd8; }
 .theme-dot[data-t="dark"] { background: #161618; border: 1px solid #333; }
 
-/* ================= 书架样式 ================= */
+/* 书架样式 v1.1 */
 #bookshelf { padding: 24px; padding-top: calc(24px + var(--sat)); max-width: 800px; margin: 0 auto; }
 .shelf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; gap: 12px; }
 .shelf-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; flex-shrink: 0; }
@@ -85,35 +84,35 @@ body.ui-visible #header { transform: translateY(0); }
 .btn-import:hover { opacity: 0.9; transform: translateY(-1px); }
 .btn-import:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .book-list { display: flex; flex-direction: column; gap: 16px; }
-.book-item { padding: 20px; background: var(--card); border-radius: 16px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; transition: all .25s; gap: 16px; }
+.book-item { background: var(--card); border-radius: 16px; border: 1px solid var(--border); display: flex; align-items: center; overflow: hidden; transition: all .25s; height: 76px; }
 .book-item:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.04); }
-.book-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.book-name { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.progress-info { display: flex; flex-direction: column; gap: 6px; }
-.progress-text { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.progress-bar { width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.btn-spine { width: 12px; height: 100%; border: none; background: var(--accent); border-radius: 16px 0 0 16px; cursor: pointer; transition: width .2s, background .2s; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.8); }
+.btn-spine:hover { width: 18px; background: rgba(0,0,0,0.1); }
+.btn-spine:active { background: rgba(0,0,0,0.2); }
+.book-main { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; cursor: pointer; height: 100%; }
+.book-name { font-size: 17px; font-weight: 600; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.progress-info { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; }
+.progress-text { font-size: 12px; color: var(--text-secondary); line-height: 1.2; height: 14px; }
+.progress-bar { width: 100%; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 2px; }
 .progress-fill { height: 100%; background: linear-gradient(270deg, var(--accent), transparent); border-radius: 2px; transition: width .3s; }
-.book-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
-.btn-read { padding: 8px 16px; border-radius: 8px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; background: var(--accent); color: #fff; transition: all .2s; }
-.btn-read:hover { opacity: 0.9; }
-.btn-icon-action { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; }
+.book-actions { display: flex; flex-direction: column; gap: 4px; padding: 0 12px 0 8px; height: 100%; justify-content: center; }
+.btn-icon-action { width: 28px; height: 28px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; }
 .btn-icon-action:hover { background: var(--border); color: var(--text); }
-.btn-icon-action.btn-delete { color: #ff4d4f; border-color: rgba(255, 77, 79, 0.2); }
-.btn-icon-action.btn-delete:hover { background: rgba(255, 77, 79, 0.1); border-color: #ff4d4f; }
+.btn-icon-action.btn-delete { color: #ff4d4f; }
+.btn-icon-action.btn-delete:hover { background: rgba(255, 77, 79, 0.1); }
+
 .empty-tip { text-align: center; padding: 80px 20px; color: var(--text-secondary); font-size: 15px; line-height: 1.6; }
 #loading-mask { position: fixed; inset: 0; z-index: 999; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 16px; color: var(--text-secondary); transition: opacity .3s; gap: 12px; }
 #loading-mask.hidden { opacity: 0; pointer-events: none; }
 .loading-spinner { width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* 移动端适配 */
 @media (max-width: 600px) { 
   #content-wrapper { font-size: 16px; padding-left: 20px; padding-right: 20px; line-height: 1.8; } 
   #content-wrapper .chapter-title { font-size: 20px; } 
   .shelf-header h1 { font-size: 24px; } 
-  .book-item { padding: 16px; flex-wrap: wrap; }
-  .book-actions { width: 100%; justify-content: flex-end; margin-top: 4px; }
-  .btn-icon-action { width: 32px; height: 32px; }
+  .book-name { font-size: 16px; }
+  .btn-spine { width: 10px; }
 }
 </style>
 </head>
@@ -156,18 +155,22 @@ body.ui-visible #header { transform: translateY(0); }
 </div>
 
 <script>
-// ================= 1. 云端 API =================
 const API = {
     async listBooks() { return (await fetch('/api/books')).json(); },
     async getBookMeta(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}`)).json(); },
     async getBookContent(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}/content`)).text(); },
-    async createBook(d) { return (await fetch('/api/books', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) })).json(); },
-    // 修复：添加 keepalive: true，防止页面关闭时进度保存请求被浏览器取消
+    // v1.2 修改：createBook 接收 FormData
+    async createBook(formData) { 
+        return (await fetch('/api/books', { 
+            method:'POST', 
+            body: formData
+        })).json(); 
+    },
     async updateProgress(id, d) { return (await fetch(`/api/books/${encodeURIComponent(id)}/progress`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d), keepalive: true })).json(); },
-    async deleteBook(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}`, { method:'DELETE' })).json(); }
+    async deleteBook(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}`, { method:'DELETE' })).json(); },
+    async pinBook(id) { return (await fetch(`/api/books/${encodeURIComponent(id)}/pin`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:'{}' })).json(); }
 };
 
-// ================= 2. IndexedDB 缓存 =================
 const LocalCache = {
     db: null,
     async init() {
@@ -198,9 +201,9 @@ const LocalCache = {
             tx.oncomplete = () => resolve();
         });
     },
-    async updateProgress(id, progressGidx, scrollTop) {
+    async updateProgress(id, progressGidx) {
         const data = await this.get(id);
-        if (data) { data.lastProgressGidx = progressGidx; data.lastScrollTop = scrollTop; await this.set(id, data); }
+        if (data) { data.lastProgressGidx = progressGidx; await this.set(id, data); }
     },
     async delete(id) {
         if(!this.db) await this.init();
@@ -218,23 +221,41 @@ const LocalCache = {
     }
 };
 
-// ================= 3. 数据管理层 =================
 const DataManager = {
     bookId: null, chMap: [], totalParagraphs: 0, _localParagraphs: [],
     async init(bookId, forceRefresh = false) {
         this.bookId = bookId;
-        if (!forceRefresh) {
-            const cached = await LocalCache.get(bookId);
-            if (cached && cached.paragraphs && cached.paragraphs.length > 0) {
-                this._localParagraphs = cached.paragraphs; this.chMap = cached.chMap; this.totalParagraphs = cached.paragraphs.length;
-                try { return await API.getBookMeta(bookId); } 
-                catch (e) { return { name: cached.name, progress_gidx: cached.lastProgressGidx || 0, scroll_top: cached.lastScrollTop || 0 }; }
-            }
+        const cached = await LocalCache.get(bookId);
+        const isRecentCache = cached && cached.timestamp && (Date.now() - cached.timestamp < 5 * 60 * 1000);
+
+        if (!forceRefresh && cached && cached.paragraphs && cached.paragraphs.length > 0) {
+            this._localParagraphs = cached.paragraphs; this.chMap = cached.chMap; this.totalParagraphs = cached.paragraphs.length;
+            
+            let networkMeta = null;
+            try { networkMeta = await API.getBookMeta(bookId); } 
+            catch (e) { return { name: cached.name, progress_gidx: cached.lastProgressGidx || 0 }; }
+            
+            const finalProgressGidx = isRecentCache ? (cached.lastProgressGidx || 0) : (networkMeta.progress_gidx || 0);
+            return {
+                name: networkMeta.name || cached.name,
+                progress_gidx: finalProgressGidx
+            };
         }
+        
+        // 无缓存，从网络下载并本地解析
         const [meta, text] = await Promise.all([API.getBookMeta(bookId), API.getBookContent(bookId)]);
         const parsed = await parseTextAsync(text, meta.name);
         this._localParagraphs = parsed.paragraphs; this.chMap = parsed.chMap; this.totalParagraphs = parsed.paragraphs.length;
-        await LocalCache.set(bookId, { paragraphs: parsed.paragraphs, chMap: parsed.chMap, name: meta.name, lastProgressGidx: meta.progress_gidx || 0, lastScrollTop: meta.scroll_top || 0 });
+        
+        // 解析完立即存入本地，下次免解析
+        await LocalCache.set(bookId, { 
+            paragraphs: parsed.paragraphs, 
+            chMap: parsed.chMap, 
+            name: meta.name, 
+            lastProgressGidx: meta.progress_gidx || 0, 
+            timestamp: Date.now() 
+        });
+        
         return meta;
     },
     getChapterByGlobalIdx(gIdx) {
@@ -245,10 +266,9 @@ const DataManager = {
     destroy() { this._localParagraphs = []; this.chMap = []; this.totalParagraphs = 0; }
 };
 
-// ================= 4. Web Worker =================
+// v1.2 修改：在 Worker 里直接计算字数
 function parseTextAsync(text, fileName) {
     return new Promise((resolve, reject) => {
-        // 修复：修正正则表达式的转义层级，确保 Worker 接收到的是正确的 \s 和 \r?\n
         const workerScript = `
             const CHAPTER_REGEX = /^\\s*(第[零一二三四五六七八九十百千万0-9]+[章节回部集卷][^。\\n]{0,15}?)\\s*$/i;
             self.onmessage = function(e) {
@@ -256,6 +276,8 @@ function parseTextAsync(text, fileName) {
                 try {
                     const lines = text.split(/\\r?\\n/);
                     const paragraphs = []; const chMap = []; let currentChapterIdx = -1;
+                    let wordCount = 0; // v1.2 新增：字数统计
+                    
                     for (let i = 0; i < lines.length; i++) {
                         const trimmed = lines[i].trim(); if (!trimmed) continue;
                         const match = trimmed.match(CHAPTER_REGEX);
@@ -267,9 +289,10 @@ function parseTextAsync(text, fileName) {
                             if (currentChapterIdx === -1) { currentChapterIdx = 0; chMap.push({ chapterIdx: 0, globalIdx: 0, title: '前言' }); paragraphs.push({ type: 'h2', text: '前言', chapterIdx: 0, globalIdx: 0 }); }
                             const gIdx = paragraphs.length;
                             paragraphs.push({ type: 'p', text: trimmed, chapterIdx: currentChapterIdx, globalIdx: gIdx });
+                            wordCount += trimmed.length; // 累加字数
                         }
                     }
-                    self.postMessage({ success: true, paragraphs, chMap, bookName: fileName.replace(/\\.(txt|TXT)$/i, '') });
+                    self.postMessage({ success: true, paragraphs, chMap, bookName: fileName.replace(/\\.(txt|TXT)$/i, ''), wordCount });
                 } catch (err) { self.postMessage({ success: false, error: err.message }); }
             };`;
         const blob = new Blob([workerScript], { type: 'application/javascript' });
@@ -280,7 +303,6 @@ function parseTextAsync(text, fileName) {
     });
 }
 
-// ================= 5. 渲染引擎 =================
 const contentWrapper = document.getElementById('content-wrapper');
 const readerEl = document.getElementById('reader');
 const BUFFER_SIZE = 40; 
@@ -300,8 +322,6 @@ function setupVirtualScroll() {
     let sTop = document.getElementById('sentinel-top'); let sBot = document.getElementById('sentinel-bottom');
     if (!sTop) { sTop = document.createElement('div'); sTop.id = 'sentinel-top'; sTop.style.height = '1px'; contentWrapper.prepend(sTop); }
     if (!sBot) { sBot = document.createElement('div'); sBot.id = 'sentinel-bottom'; sBot.style.height = '1px'; contentWrapper.appendChild(sBot); }
-    
-    // 修复：将 rootMargin 改为百分比，更好适配移动端不同屏幕尺寸
     obsBot = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && windowEnd < DataManager.totalParagraphs - 1) loadMore('bottom'); }, { root: readerEl, rootMargin: '150%' });
     obsBot.observe(sBot);
     obsTop = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && windowStart > 0) loadMore('top'); }, { root: readerEl, rootMargin: '150%' });
@@ -320,20 +340,16 @@ function loadMore(direction) {
         if (newStart === windowStart) return;
         const f = document.createDocumentFragment();
         DataManager._localParagraphs.slice(newStart, windowStart).forEach((p, i) => f.appendChild(createNode(p, newStart + i)));
-        
         const sTop = document.getElementById('sentinel-top');
         const oldScrollHeight = contentWrapper.scrollHeight;
         contentWrapper.insertBefore(f, sTop.nextSibling); 
         windowStart = newStart;
-        
-        // 修复：改为同步修改 scrollTop，避免 requestAnimationFrame 带来的高频抖动
         readerEl.scrollTop += (contentWrapper.scrollHeight - oldScrollHeight);
     }
     cleanUpDOM();
 }
 
 function cleanUpDOM() {
-    // 修复：使用 nextSibling/previousSibling 安全遍历，替代脆弱的 children[1] 硬编码索引
     let sTop = document.getElementById('sentinel-top');
     let node = sTop ? sTop.nextSibling : contentWrapper.firstChild;
     while (node && node.id !== 'sentinel-bottom') {
@@ -345,7 +361,6 @@ function cleanUpDOM() {
             break;
         }
     }
-    
     let sBot = document.getElementById('sentinel-bottom');
     node = sBot ? sBot.previousSibling : contentWrapper.lastChild;
     while (node && node.id !== 'sentinel-top') {
@@ -360,25 +375,52 @@ function cleanUpDOM() {
 }
 
 function teleportTo(centerIdx) {
-    const newStart = Math.max(0, centerIdx - BUFFER_SIZE); const newEnd = Math.min(DataManager.totalParagraphs - 1, centerIdx + BUFFER_SIZE);
+    const newStart = Math.max(0, centerIdx - BUFFER_SIZE); 
+    const newEnd = Math.min(DataManager.totalParagraphs - 1, centerIdx + BUFFER_SIZE);
+    
     contentWrapper.innerHTML = '';
     const sTop = document.createElement('div'); sTop.id = 'sentinel-top'; sTop.style.height = '1px'; contentWrapper.appendChild(sTop);
+    
     const f = document.createDocumentFragment();
     DataManager._localParagraphs.slice(newStart, newEnd + 1).forEach((p, i) => f.appendChild(createNode(p, newStart + i)));
     contentWrapper.appendChild(f);
+    
     const sBot = document.createElement('div'); sBot.id = 'sentinel-bottom'; sBot.style.height = '1px'; contentWrapper.appendChild(sBot);
-    windowStart = newStart; windowEnd = newEnd; setupVirtualScroll();
+    
+    windowStart = newStart; windowEnd = newEnd; 
+    setupVirtualScroll();
+    
+    setTimeout(() => {
+        const targetNode = contentWrapper.querySelector(`[data-gidx="${centerIdx}"]`);
+        if (targetNode) {
+            void targetNode.offsetHeight; 
+            targetNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 50);
 }
 
-// ================= 6. 滚动监听 =================
+function calculateCurrentProgress() {
+    const scrollTop = readerEl.scrollTop; 
+    const domNodes = contentWrapper.children; 
+    let topGidx = windowStart;
+    for (let i = 0; i < domNodes.length; i++) { 
+        if (domNodes[i].offsetTop <= scrollTop + 100) topGidx = parseInt(domNodes[i].dataset.gidx); 
+        else break; 
+    }
+    return topGidx;
+}
+
 let scrollTimer;
 readerEl.addEventListener('scroll', () => {
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(() => {
-        const scrollTop = readerEl.scrollTop; const domNodes = contentWrapper.children; let topGidx = windowStart;
-        for (let i = 0; i < domNodes.length; i++) { if (domNodes[i].offsetTop <= scrollTop + 100) topGidx = parseInt(domNodes[i].dataset.gidx); else break; }
+        const topGidx = calculateCurrentProgress();
         const currentChapter = DataManager.getChapterByGlobalIdx(topGidx);
-        if (currentChapter.chapterIdx !== currentChapterIdx) { currentChapterIdx = currentChapter.chapterIdx; updateHeader(currentChapterIdx); }
+        
+        if (currentChapter.chapterIdx !== currentChapterIdx) { 
+            currentChapterIdx = currentChapter.chapterIdx; 
+            updateHeader(currentChapterIdx); 
+        }
         currentGlobalIdx = topGidx;
         saveProgress();
     }, 60);
@@ -394,29 +436,12 @@ async function jumpToChapter(cIdx) {
     const ch = DataManager.chMap.find(c => c.chapterIdx === cIdx); 
     if (!ch) return;
     
-    // 1. 先关闭 UI，避免抽屉和 Header 的隐藏动画干扰后续的布局计算
     closeDrawers(); 
     document.body.classList.remove('ui-visible');
     
-    // 2. 重建 DOM
     teleportTo(ch.globalIdx);
-    
-    // 3. 修复核心：废弃 requestAnimationFrame，使用 setTimeout 给浏览器 50ms 完成 Layout
-    // 50ms 既能保证布局计算完成，又不会产生用户可感知的视觉延迟
-    setTimeout(() => {
-        const targetNode = contentWrapper.querySelector(`[data-gidx="${ch.globalIdx}"]`);
-        if (targetNode) {
-            // 强制同步布局 (Forced Synchronous Layout)
-            // 通过读取 offsetHeight，强制浏览器立刻完成该节点及父容器的布局计算
-            void targetNode.offsetHeight; 
-            
-            // 此时执行 scrollIntoView，位置计算绝对精准
-            targetNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }, 50);
 }
 
-// ================= 7. 交互与设置 =================
 let touchStartX = 0, touchStartY = 0, isSwiping = false, lastTouchTime = 0;
 contentWrapper.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; isSwiping = false; }, { passive: true });
 contentWrapper.addEventListener('touchmove', e => { if (Math.abs(e.touches[0].clientX - touchStartX) > 15 || Math.abs(e.touches[0].clientY - touchStartY) > 15) isSwiping = true; }, { passive: true });
@@ -424,10 +449,7 @@ contentWrapper.addEventListener('touchend', e => { lastTouchTime = Date.now(); i
 contentWrapper.addEventListener('click', e => {
     if (Date.now() - lastTouchTime < 500 || isSwiping || window.getSelection().toString().length > 0) return;
     if (e.target.closest('button, a, input, #drawer-settings')) return;
-    const clickX = e.clientX; const width = window.innerWidth;
-    if (clickX < width * 0.3) jumpToChapter(currentChapterIdx - 1);
-    else if (clickX > width * 0.7) jumpToChapter(currentChapterIdx + 1);
-    else toggleUI();
+    toggleUI();
 });
 
 document.addEventListener('keydown', e => {
@@ -479,27 +501,43 @@ document.getElementById('font-inc').onclick = () => { if(settings.fontSize < 28)
 document.querySelectorAll('[data-line]').forEach(btn => { btn.onclick = () => { settings.lineHeight = parseFloat(btn.dataset.line); applySettings(); }; });
 document.querySelectorAll('.theme-dot').forEach(dot => { dot.onclick = () => { settings.theme = dot.dataset.t; applySettings(); }; });
 
-// ================= 8. 进度保存 =================
 let saveTimer;
 function saveProgress(force = false) {
     clearTimeout(saveTimer);
+    
     const doSave = () => {
         if (currentBookId) {
-            API.updateProgress(currentBookId, { progressGidx: currentGlobalIdx, scrollTop: readerEl.scrollTop }).catch(()=>{});
-            LocalCache.updateProgress(currentBookId, currentGlobalIdx, readerEl.scrollTop);
+            if (force) {
+                currentGlobalIdx = calculateCurrentProgress();
+                const ch = DataManager.getChapterByGlobalIdx(currentGlobalIdx);
+                if (ch) currentChapterIdx = ch.chapterIdx;
+            }
+
+            const currentChapter = DataManager.chMap.find(c => c.chapterIdx === currentChapterIdx);
+            const chapterTitle = currentChapter ? currentChapter.title : '';
+            
+            API.updateProgress(currentBookId, { 
+                progressGidx: currentGlobalIdx,
+                currentChapterTitle: chapterTitle 
+            }).catch(()=>{});
+            
+            LocalCache.updateProgress(currentBookId, currentGlobalIdx);
         }
     };
-    if (force) doSave(); else saveTimer = setTimeout(doSave, 500);
+    
+    if (force) {
+        doSave(); 
+    } else {
+        saveTimer = setTimeout(doSave, 500); 
+    }
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveProgress(true); });
 window.addEventListener('beforeunload', () => { saveProgress(true); });
 
-// ================= 9. 书架与导入 =================
-// 修复：新增 XSS 防御函数
 function escapeHtml(text) {
     if (!text) return '';
-    return text.replace(/[&<>"']/g, function(m) {
-        return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m];
+    return text.replace(/[&<>"'\/`]/g, function(m) {
+        return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '/': '&#x2F;', '`': '&#x60;'}[m];
     });
 }
 
@@ -520,26 +558,23 @@ async function renderBookList() {
     if (!books || books.length === 0) { list.innerHTML = '<div class="empty-tip">书架空空如也<br>点击右上角导入你的第一本 TXT 小说</div>'; return; }
     
     list.innerHTML = books.map(b => {
-        const chMap = JSON.parse(b.ch_map || '[]');
-        let currentChIdx = 0;
-        for (let i = 0; i < chMap.length; i++) { if (chMap[i].globalIdx <= (b.progress_gidx || 0)) currentChIdx = i; else break; }
-        const totalChapters = b.total_chapters || chMap.length;
-        const readChapters = currentChIdx + 1;
-        const progressPercent = Math.round((readChapters / totalChapters) * 100);
-        const currentTitle = chMap[currentChIdx] ? chMap[currentChIdx].title : '未知';
+        const currentTitle = b.current_chapter_title || '未开始';
+        const totalP = b.total_paragraphs || 1; 
+        const readP = (b.progress_gidx || 0) + 1;
+        const progressPercent = Math.min(100, Math.round((readP / totalP) * 100));
 
         return `
         <div class="book-item" data-id="${escapeHtml(b.id)}">
-            <div class="book-main">
+            <button class="btn-spine" onclick="pinBook('${escapeHtml(b.id)}')" title="置顶"></button>
+            <div class="book-main" onclick="openBook('${escapeHtml(b.id)}')">
                 <div class="book-name">${escapeHtml(b.name)}</div>
                 <div class="progress-info">
-                    <span class="progress-text">${escapeHtml(currentTitle)} · ${readChapters}/${totalChapters}章 (${progressPercent}%)</span>
+                    <span class="progress-text">${escapeHtml(currentTitle)} (${progressPercent}%)</span>
                     <div class="progress-bar"><div class="progress-fill" style="width: ${progressPercent}%"></div></div>
                 </div>
             </div>
             <div class="book-actions">
-                <button class="btn-read" onclick="openBook('${escapeHtml(b.id)}')">阅读</button>
-                <button class="btn-icon-action" onclick="refreshBook('${escapeHtml(b.id)}')" title="刷新缓存">
+                <button class="btn-icon-action" onclick="refreshBook('${escapeHtml(b.id)}')" title="刷新">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                 </button>
                 <button class="btn-icon-action btn-delete" onclick="deleteBook('${escapeHtml(b.id)}')" title="删除">
@@ -549,6 +584,13 @@ async function renderBookList() {
         </div>`;
     }).join('');
 }
+
+window.pinBook = async function(id) {
+    try {
+        await API.pinBook(id);
+        await renderBookList(); 
+    } catch(e) { alert('置顶失败：' + e.message); }
+};
 
 window.refreshBook = async function(id) {
     loadingMask.classList.remove('hidden'); loadingText.textContent = '正在重新解析...';
@@ -570,15 +612,13 @@ window.openBook = async function(id) {
         contentWrapper.innerHTML = ''; windowStart = 0; windowEnd = 0;
         renderTocList();
         
-        // 修复：增加 Math.min 边界保护，防止进度越界导致崩溃
         currentGlobalIdx = Math.min(meta.progress_gidx || 0, DataManager.totalParagraphs - 1);
         currentChapterIdx = DataManager.getChapterByGlobalIdx(currentGlobalIdx).chapterIdx;
         
-        teleportTo(currentGlobalIdx); updateHeader(currentChapterIdx); applySettings();
-        setTimeout(() => { 
-            if (meta.scroll_top > 0) readerEl.scrollTop = meta.scroll_top;
-            else { const targetNode = contentWrapper.querySelector(`[data-gidx="${currentGlobalIdx}"]`); if (targetNode) targetNode.scrollIntoView({ block: 'start' }); }
-        }, 150);
+        applySettings();
+        teleportTo(currentGlobalIdx);
+        updateHeader(currentChapterIdx);
+        
     } catch (e) { alert('加载失败：' + e.message); document.getElementById('bookshelf').classList.remove('hidden'); } 
     finally { loadingMask.classList.add('hidden'); }
 };
@@ -589,30 +629,67 @@ window.deleteBook = async function(id) {
     }
 };
 
+// v1.2 重构：前端解析 -> 本地缓存 -> FormData 上传
 importBtn.onclick = () => document.getElementById('file-input').click();
 document.getElementById('file-input').onchange = async (e) => {
     const file = e.target.files[0]; if (!file) return;
-    importBtn.disabled = true; loadingText.textContent = '正在后台解析并上传...'; loadingMask.classList.remove('hidden');
+    importBtn.disabled = true; 
+    loadingText.textContent = '正在本地解析...'; // 先提示解析
+    loadingMask.classList.remove('hidden');
+    
     try {
+        // 1. 读取文本
         const text = await file.text();
+        
+        // 2. 本地 Worker 解析（前端负责计算，Worker 负责 CPU）
+        loadingText.textContent = '正在解析章节与字数...';
         const parsed = await parseTextAsync(text, file.name);
-        const id = 'book_' + Date.now();
-        const r2_key = `txt/${id}.txt`;
-        await API.createBook({
-            id, name: file.name.replace(/\.(txt|TXT)$/i, ''), content: text, r2_key: r2_key,
-            chMap: JSON.stringify(parsed.chMap),
-            wordCount: parsed.paragraphs.reduce((s, p) => s + (p.type === 'p' ? p.text.length : 0), 0),
-            totalChapters: parsed.chMap.length
+        
+        // 3. 生成本地 ID，用于 IndexedDB 和后端一致
+        const bookId = crypto.randomUUID();
+        
+        // 4. 立即存入 IndexedDB (下次打开就是秒开)
+        await LocalCache.set(bookId, { 
+            paragraphs: parsed.paragraphs, 
+            chMap: parsed.chMap, 
+            name: parsed.bookName, 
+            lastProgressGidx: 0, 
+            timestamp: Date.now() 
         });
-        await renderBookList();
-    } catch (err) { alert('导入失败：' + err.message); } 
-    finally { loadingMask.classList.add('hidden'); importBtn.disabled = false; e.target.value = ''; }
+        
+        // 5. 准备 FormData 上传
+        loadingText.textContent = '正在上传到云端...';
+        const formData = new FormData();
+        formData.append('file', file); // 原始文件
+        formData.append('metadata', JSON.stringify({
+            id: bookId,
+            name: parsed.bookName,
+            wordCount: parsed.wordCount, // v1.2: 使用 Worker 返回的字数
+            totalChapters: parsed.chMap.length,
+            totalParagraphs: parsed.paragraphs.length,
+            chMap: JSON.stringify(parsed.chMap),
+            firstChapterTitle: (parsed.chMap.length > 0 && parsed.chMap[0].title) ? parsed.chMap[0].title : '开始阅读'
+        }));
+        
+        // 6. 上传
+        const res = await API.createBook(formData);
+        
+        if (res.success && res.id) {
+            await renderBookList();
+        }
+    } catch (err) { 
+        alert('导入失败：' + err.message); 
+    } 
+    finally { 
+        loadingMask.classList.add('hidden'); 
+        importBtn.disabled = false; 
+        e.target.value = ''; 
+    }
 };
 
 document.getElementById('toc-list').onclick = (e) => { const item = e.target.closest('.item'); if (item) jumpToChapter(parseInt(item.dataset.cidx)); };
 function renderTocList() { document.getElementById('toc-list').innerHTML = DataManager.chMap.map(ch => `<div class="item" data-cidx="${ch.chapterIdx}">${escapeHtml(ch.title)}</div>`).join(''); }
 
-// ================= 10. 初始化 =================
 (async function() { await LocalCache.init(); applySettings(); renderBookList(); })();
 </script>
 </body>
