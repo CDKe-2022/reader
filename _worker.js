@@ -55,7 +55,7 @@ body.ui-visible #header { transform: translateY(0); }
 #drawer-toc .item { padding: 14px 16px; border-radius: 8px; font-size: 15px; color: var(--text-secondary); cursor: pointer; white-space: normal; line-height: 1.5; margin-bottom: 4px; transition: all .2s; }
 #drawer-toc .item:hover { background: var(--card); color: var(--text); }
 #drawer-toc .item.active { background: var(--accent); color: #fff; font-weight: 500; box-shadow: 0 4px 12px rgba(156, 129, 99, 0.2); }
-#drawer-settings { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); }
+#drawer-settings { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 #drawer-settings.active { transform: translateY(0); }
 .setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
 .setting-label { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
@@ -123,7 +123,7 @@ body.ui-visible #header { transform: translateY(0); }
 #float-bar .fb-divider { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
 
 /* TTS settings panel */
-#drawer-tts { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); }
+#drawer-tts { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 #drawer-tts.active { transform: translateY(0); }
 .tts-voice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
 .tts-voice-btn { padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 14px; cursor: pointer; transition: all .2s; text-align: center; }
@@ -918,8 +918,12 @@ class UIController {
 
     toggleTheme() {
         const isDark = this.settings.theme === 'dark';
-        this.settings.theme = isDark ? (this.settings.previousTheme || 'default') : 'dark';
-        if (!isDark) this.settings.previousTheme = this.settings.theme;
+        if (isDark) {
+            this.settings.theme = this.settings.previousTheme || 'default';
+        } else {
+            this.settings.previousTheme = this.settings.theme;
+            this.settings.theme = 'dark';
+        }
         this.saveSettings();
         this.applySettings();
     }
