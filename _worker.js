@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>极简阅读器 v1.6</title>
+<title>极简阅读器 2.0</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F4F1EA">
 
 <script>
   (function() {
     try {
-      const s = JSON.parse(localStorage.getItem('reader_settings_v14') || '{"theme":"default"}');
+      const s = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{"theme":"default"}');
       document.documentElement.setAttribute('data-theme', s.theme);
     } catch(e) {}
   })();
 </script>
 
 <style>
-/* --- v1.2 CSS (100% Restore) --- */
+/* --- 2.0 CSS --- */
 :root { --sat: env(safe-area-inset-top); --sab: env(safe-area-inset-bottom); --header-h: 56px; --content-max-w: 720px; --bg: #F4F1EA; --text: #2D2D2D; --text-secondary: #888888; --card: rgba(255,255,255,0.5); --border: rgba(0,0,0,0.04); --accent: #9C8163; --header-bg: rgba(244, 241, 234, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
 [data-theme="white"] { --bg: #FFFFFF; --text: #1A1A1A; --card: rgba(0,0,0,0.02); --border: rgba(0,0,0,0.06); --accent: #0055A4; --header-bg: rgba(255, 255, 255, 0.85); }
 [data-theme="green"] { --bg: #cce8cf; --text: #2f3e2f; --text-secondary: #5c705c; --card: rgba(255,255,255,0.4); --border: rgba(0,0,0,0.05); --accent: #4a7c59; --header-bg: rgba(204, 232, 207, 0.85); }
@@ -73,7 +73,7 @@ body.ui-visible #header { transform: translateY(0); }
 .theme-dot[data-t="sepia"] { background: #f4ecd8; }
 .theme-dot[data-t="dark"] { background: #161618; border: 1px solid #333; }
 
-/* v1.2 Bookshelf UI */
+/* 2.0 Bookshelf UI */
 #bookshelf { padding: 24px; padding-top: calc(24px + var(--sat)); max-width: 800px; margin: 0 auto; }
 .shelf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; gap: 12px; }
 .shelf-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; flex-shrink: 0; }
@@ -111,7 +111,7 @@ body.ui-visible #header { transform: translateY(0); }
 .toast { background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 24px; font-size: 14px; opacity: 0; transform: translateY(20px); transition: all .3s; text-align: center; max-width: 80vw; box-shadow: 0 4px 12px rgba(0,0,0,0.1); backdrop-filter: blur(4px); }
 .toast.show { opacity: 1; transform: translateY(0); }
 
-/* v1.6: Auto-scroll & TTS floating bar */
+/* 2.0: Auto-scroll & TTS floating bar */
 #float-bar { position: fixed; bottom: calc(16px + var(--sab)); left: 50%; z-index: 95; display: flex; align-items: center; gap: 8px; background: var(--header-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--border); border-radius: 28px; padding: 8px 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(20px); transition: all .35s cubic-bezier(.4,0,.2,1); max-width: 92vw; }
 #float-bar.visible { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
 #float-bar .fb-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; }
@@ -180,7 +180,7 @@ body.ui-visible #header { transform: translateY(0); }
   <div class="setting-row"><span class="setting-label">TTS 密钥</span><div class="setting-btns"><input id="tts-key-input" type="password" placeholder="留空则不验证" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
 </div>
 
-<!-- v1.6: Auto-scroll & TTS floating bar -->
+<!-- 2.0: Auto-scroll & TTS floating bar -->
 <div id="float-bar">
   <button class="fb-btn" id="btn-scroll" title="自动滚动">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
@@ -204,7 +204,7 @@ body.ui-visible #header { transform: translateY(0); }
 </div>
 
 <script>
-// --- v1.4: Class-based Architecture ---
+// --- 2.0: Class-based Architecture ---
 
 class StorageManager {
     constructor() {
@@ -302,7 +302,7 @@ class Utils {
 
     static parseTextAsync(text, fileName) {
         return new Promise((resolve, reject) => {
-            // v1.5: Multi-regex array with priority + scoring system
+            // 2.0: Multi-regex array with priority + scoring system
             const chapterPatterns = [
                 // 1. 标准章节（最高优先级）：第一章、第一百二十章、第一卷……
                 { source: "^(?:\\s{0,4})第\\s*(?:\\d+|[０-９]+|[零〇○一二三四五六七八九十百千万两壹贰叁肆伍陆柒捌玖拾佰仟]+)\\s*(?:章|节|回|卷|部|篇|集|季)\\s*(?:[：:\\-—]\\s*|\\s+)?[^\\r\\n]{0,40}$", flags: "i", weight: 60 },
@@ -787,7 +787,7 @@ class UIController {
         this.readerEl = document.getElementById('reader');
         this.contentWrapper = document.getElementById('content-wrapper');
         this.saveTimer = null;
-        this.settings = JSON.parse(localStorage.getItem('reader_settings_v14') || '{"fontSize":18,"lineHeight":1.9,"theme":"default","previousTheme":"default"}');
+        this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{"fontSize":18,"lineHeight":1.9,"theme":"default","previousTheme":"default"}');
     }
 
     init() {
@@ -869,7 +869,7 @@ class UIController {
             }; 
         });
 
-        // v1.6: Auto-scroll & TTS events
+        // 2.0: Auto-scroll & TTS events
         document.getElementById('btn-scroll').onclick = () => autoScroll.toggle();
         document.getElementById('scroll-speed-label').onclick = () => autoScroll.cycleSpeed();
         document.getElementById('btn-tts-play').onclick = () => tts.togglePlay();
@@ -904,7 +904,7 @@ class UIController {
     }
 
     saveSettings() {
-        localStorage.setItem('reader_settings_v14', JSON.stringify(this.settings));
+        localStorage.setItem('reader_settings_v2', JSON.stringify(this.settings));
     }
 
     adjustFont(delta) {
@@ -966,7 +966,7 @@ class UIController {
     }
 }
 
-// --- v1.6: Auto-scroll & TTS ---
+// --- 2.0: Auto-scroll & TTS ---
 
 class AutoScroll {
     constructor() {
@@ -976,7 +976,7 @@ class AutoScroll {
         this.readerEl = document.getElementById('reader');
         this.speedLevels = [0.5, 1.0, 1.5, 2.0, 3.0, 5.0];
         this.speedIdx = 1;
-        this.settings = JSON.parse(localStorage.getItem('reader_settings_v14') || '{}');
+        this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
         if (this.settings.scrollSpeedIdx) this.speedIdx = this.settings.scrollSpeedIdx;
         this.speed = this.speedLevels[this.speedIdx];
         this.updateLabel();
@@ -1013,7 +1013,7 @@ class AutoScroll {
         this.speed = this.speedLevels[this.speedIdx];
         this.updateLabel();
         this.settings.scrollSpeedIdx = this.speedIdx;
-        localStorage.setItem('reader_settings_v14', JSON.stringify(this.settings));
+        localStorage.setItem('reader_settings_v2', JSON.stringify(this.settings));
     }
 
     updateLabel() {
@@ -1030,7 +1030,7 @@ class TTSController {
         this.queueIdx = 0;
         this.voice = 'zh-CN-XiaoxiaoNeural';
         this.speed = 1.0;
-        this.settings = JSON.parse(localStorage.getItem('reader_settings_v14') || '{}');
+        this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
         this.ttsUrl = this.settings.ttsUrl || '';
         this.ttsKey = this.settings.ttsKey || '';
         if (this.settings.ttsVoice) this.voice = this.settings.ttsVoice;
@@ -1060,12 +1060,12 @@ class TTSController {
     }
 
     saveSettings() {
-        const s = JSON.parse(localStorage.getItem('reader_settings_v14') || '{}');
+        const s = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
         s.ttsUrl = this.ttsUrl;
         s.ttsKey = this.ttsKey;
         s.ttsVoice = this.voice;
         s.ttsSpeed = this.speed;
-        localStorage.setItem('reader_settings_v14', JSON.stringify(s));
+        localStorage.setItem('reader_settings_v2', JSON.stringify(s));
     }
 
     isConfigured() {
