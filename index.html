@@ -3,21 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>极简阅读器 v1.4</title>
+<title>极简阅读器 2.0</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F4F1EA">
 
 <script>
   (function() {
     try {
-      const s = JSON.parse(localStorage.getItem('reader_settings_v14') || '{"theme":"default"}');
-      document.documentElement.setAttribute('data-theme', s.theme);
-    } catch(e) {}
+      // 2.0 数据迁移：修复旧版 bug 导致的 previousTheme='dark' 脏数据
+      let s = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
+      if (s.previousTheme === 'dark' || s.previousTheme === s.theme) {
+        s.previousTheme = 'default';
+      }
+      localStorage.setItem('reader_settings_v2', JSON.stringify(s));
+      document.documentElement.setAttribute('data-theme', s.theme || 'default');
+    } catch(e) {
+      document.documentElement.setAttribute('data-theme', 'default');
+    }
   })();
 </script>
 
 <style>
-/* --- v1.2 CSS (100% Restore) --- */
+/* --- 2.0 CSS --- */
 :root { --sat: env(safe-area-inset-top); --sab: env(safe-area-inset-bottom); --header-h: 56px; --content-max-w: 720px; --bg: #F4F1EA; --text: #2D2D2D; --text-secondary: #888888; --card: rgba(255,255,255,0.5); --border: rgba(0,0,0,0.04); --accent: #9C8163; --header-bg: rgba(244, 241, 234, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
 [data-theme="white"] { --bg: #FFFFFF; --text: #1A1A1A; --card: rgba(0,0,0,0.02); --border: rgba(0,0,0,0.06); --accent: #0055A4; --header-bg: rgba(255, 255, 255, 0.85); }
 [data-theme="green"] { --bg: #cce8cf; --text: #2f3e2f; --text-secondary: #5c705c; --card: rgba(255,255,255,0.4); --border: rgba(0,0,0,0.05); --accent: #4a7c59; --header-bg: rgba(204, 232, 207, 0.85); }
@@ -55,7 +62,7 @@ body.ui-visible #header { transform: translateY(0); }
 #drawer-toc .item { padding: 14px 16px; border-radius: 8px; font-size: 15px; color: var(--text-secondary); cursor: pointer; white-space: normal; line-height: 1.5; margin-bottom: 4px; transition: all .2s; }
 #drawer-toc .item:hover { background: var(--card); color: var(--text); }
 #drawer-toc .item.active { background: var(--accent); color: #fff; font-weight: 500; box-shadow: 0 4px 12px rgba(156, 129, 99, 0.2); }
-#drawer-settings { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); }
+#drawer-settings { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 #drawer-settings.active { transform: translateY(0); }
 .setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
 .setting-label { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
@@ -73,7 +80,7 @@ body.ui-visible #header { transform: translateY(0); }
 .theme-dot[data-t="sepia"] { background: #f4ecd8; }
 .theme-dot[data-t="dark"] { background: #161618; border: 1px solid #333; }
 
-/* v1.2 Bookshelf UI */
+/* 2.0 Bookshelf UI */
 #bookshelf { padding: 24px; padding-top: calc(24px + var(--sat)); max-width: 800px; margin: 0 auto; }
 .shelf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; gap: 12px; }
 .shelf-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; flex-shrink: 0; }
@@ -110,6 +117,25 @@ body.ui-visible #header { transform: translateY(0); }
 #toast-container { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 1000; pointer-events: none; display: flex; flex-direction: column; gap: 10px; }
 .toast { background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 24px; font-size: 14px; opacity: 0; transform: translateY(20px); transition: all .3s; text-align: center; max-width: 80vw; box-shadow: 0 4px 12px rgba(0,0,0,0.1); backdrop-filter: blur(4px); }
 .toast.show { opacity: 1; transform: translateY(0); }
+
+/* 2.0: Auto-scroll & TTS floating bar */
+#float-bar { position: fixed; bottom: calc(16px + var(--sab)); left: 50%; z-index: 95; display: flex; align-items: center; gap: 8px; background: var(--header-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--border); border-radius: 28px; padding: 8px 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(20px); transition: all .35s cubic-bezier(.4,0,.2,1); max-width: 92vw; }
+#float-bar.visible { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+#float-bar .fb-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; }
+#float-bar .fb-btn:hover { background: var(--border); }
+#float-bar .fb-btn.active { background: var(--accent); color: #fff; }
+#float-bar .fb-btn.play-btn { width: 48px; height: 48px; background: var(--accent); color: #fff; }
+#float-bar .fb-btn.play-btn:hover { opacity: 0.85; }
+#float-bar .fb-speed { font-size: 13px; font-weight: 600; color: var(--text); min-width: 36px; text-align: center; cursor: pointer; user-select: none; }
+#float-bar .fb-divider { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+
+/* TTS settings panel */
+#drawer-tts { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+#drawer-tts.active { transform: translateY(0); }
+.tts-voice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+.tts-voice-btn { padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 14px; cursor: pointer; transition: all .2s; text-align: center; }
+.tts-voice-btn:hover { border-color: var(--accent); }
+.tts-voice-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 @media (max-width: 600px) { 
   #content-wrapper { font-size: 16px; padding-left: 20px; padding-right: 20px; line-height: 1.8; } 
@@ -157,10 +183,36 @@ body.ui-visible #header { transform: translateY(0); }
   <div class="setting-row"><span class="setting-label">字号</span><div class="setting-btns"><button id="font-dec">A-</button><span id="font-val" style="min-width: 30px; text-align: center; font-weight: 600;">18</span><button id="font-inc">A+</button></div></div>
   <div class="setting-row"><span class="setting-label">行距</span><div class="setting-btns"><button data-line="1.6">紧凑</button><button data-line="1.9" class="active">适中</button><button data-line="2.2">宽松</button></div></div>
   <div class="setting-row"><span class="setting-label">主题</span><div class="theme-dots"><div class="theme-dot" data-t="white" title="极简白"></div><div class="theme-dot" data-t="green" title="护眼绿"></div><div class="theme-dot" data-t="default" title="暖灰纸"></div><div class="theme-dot" data-t="sepia" title="羊皮纸"></div><div class="theme-dot" data-t="dark" title="深邃夜"></div></div></div>
+  <div class="setting-row"><span class="setting-label">TTS 地址</span><div class="setting-btns"><input id="tts-url-input" type="text" placeholder="https://your-tts-worker.workers.dev" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
+  <div class="setting-row"><span class="setting-label">TTS 密钥</span><div class="setting-btns"><input id="tts-key-input" type="password" placeholder="留空则不验证" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
+  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 2.0</span></div>
+</div>
+
+<!-- 2.0: Auto-scroll & TTS floating bar -->
+<div id="float-bar">
+  <button class="fb-btn" id="btn-scroll" title="自动滚动">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  </button>
+  <span class="fb-speed" id="scroll-speed-label">1.0x</span>
+  <div class="fb-divider"></div>
+  <button class="fb-btn play-btn" id="btn-tts-play" title="听书">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+  </button>
+  <div class="fb-divider"></div>
+  <button class="fb-btn" id="btn-tts-settings" title="语音设置">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+</div>
+
+<!-- TTS voice settings panel -->
+<div id="drawer-tts">
+  <div class="setting-row"><span class="setting-label" style="font-size: 16px; font-weight: 600;">选择音色</span></div>
+  <div class="tts-voice-grid" id="tts-voice-grid"></div>
+  <div class="setting-row" style="margin-top: 20px;"><span class="setting-label">语速</span><div class="setting-btns"><button id="tts-speed-dec">-</button><span id="tts-speed-val" style="min-width: 36px; text-align: center; font-weight: 600;">1.0x</span><button id="tts-speed-inc">+</button></div></div>
 </div>
 
 <script>
-// --- v1.4: Class-based Architecture ---
+// --- 2.0: Class-based Architecture ---
 
 class StorageManager {
     constructor() {
@@ -258,7 +310,7 @@ class Utils {
 
     static parseTextAsync(text, fileName) {
         return new Promise((resolve, reject) => {
-            // v1.5: Multi-regex array with priority + scoring system
+            // 2.0: Multi-regex array with priority + scoring system
             const chapterPatterns = [
                 // 1. 标准章节（最高优先级）：第一章、第一百二十章、第一卷……
                 { source: "^(?:\\s{0,4})第\\s*(?:\\d+|[０-９]+|[零〇○一二三四五六七八九十百千万两壹贰叁肆伍陆柒捌玖拾佰仟]+)\\s*(?:章|节|回|卷|部|篇|集|季)\\s*(?:[：:\\-—]\\s*|\\s+)?[^\\r\\n]{0,40}$", flags: "i", weight: 60 },
@@ -531,6 +583,7 @@ class ReaderApp {
             const meta = await this.initBook(id);
             document.getElementById('bookshelf').classList.add('hidden');
             document.getElementById('reader').classList.remove('hidden');
+            document.getElementById('float-bar').classList.add('visible');
             
             document.getElementById('content-wrapper').innerHTML = ''; 
             this.windowStart = 0; this.windowEnd = 0;
@@ -742,7 +795,12 @@ class UIController {
         this.readerEl = document.getElementById('reader');
         this.contentWrapper = document.getElementById('content-wrapper');
         this.saveTimer = null;
-        this.settings = JSON.parse(localStorage.getItem('reader_settings_v14') || '{"fontSize":18,"lineHeight":1.9,"theme":"default","previousTheme":"default"}');
+        this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{"fontSize":18,"lineHeight":1.9,"theme":"default","previousTheme":"default"}');
+        // 2.0 数据迁移：修复旧版 previousTheme='dark' 脏数据
+        if (this.settings.previousTheme === 'dark' || this.settings.previousTheme === this.settings.theme) {
+            this.settings.previousTheme = 'default';
+            this.saveSettings();
+        }
     }
 
     init() {
@@ -758,8 +816,11 @@ class UIController {
         
         document.getElementById('btn-back').onclick = () => { 
             this.saveProgress(true); 
+            autoScroll.stop();
+            tts.stop();
             app.bookId = null; app._localParagraphs = []; app.chMap = []; 
             document.getElementById('reader').classList.add('hidden'); 
+            document.getElementById('float-bar').classList.remove('visible');
             document.getElementById('bookshelf').classList.remove('hidden'); 
             app.renderBookList(); 
         };
@@ -820,6 +881,25 @@ class UIController {
                 this.applySettings(); 
             }; 
         });
+
+        // 2.0: Auto-scroll & TTS events
+        document.getElementById('btn-scroll').onclick = () => autoScroll.toggle();
+        document.getElementById('scroll-speed-label').onclick = () => autoScroll.cycleSpeed();
+        document.getElementById('btn-tts-play').onclick = () => tts.togglePlay();
+        document.getElementById('btn-tts-settings').onclick = () => {
+            tts.renderVoiceGrid();
+            this.toggleDrawer('drawer-tts');
+        };
+        document.getElementById('tts-speed-dec').onclick = () => tts.adjustSpeed(-0.1);
+        document.getElementById('tts-speed-inc').onclick = () => tts.adjustSpeed(0.1);
+
+        // TTS URL/Key inputs
+        const ttsUrlInput = document.getElementById('tts-url-input');
+        const ttsKeyInput = document.getElementById('tts-key-input');
+        ttsUrlInput.value = tts.ttsUrl;
+        ttsKeyInput.value = tts.ttsKey;
+        ttsUrlInput.addEventListener('change', () => { tts.ttsUrl = ttsUrlInput.value.trim(); tts.saveSettings(); });
+        ttsKeyInput.addEventListener('change', () => { tts.ttsKey = ttsKeyInput.value.trim(); tts.saveSettings(); });
     }
 
     applySettings() {
@@ -837,7 +917,7 @@ class UIController {
     }
 
     saveSettings() {
-        localStorage.setItem('reader_settings_v14', JSON.stringify(this.settings));
+        localStorage.setItem('reader_settings_v2', JSON.stringify(this.settings));
     }
 
     adjustFont(delta) {
@@ -851,8 +931,12 @@ class UIController {
 
     toggleTheme() {
         const isDark = this.settings.theme === 'dark';
-        this.settings.theme = isDark ? (this.settings.previousTheme || 'default') : 'dark';
-        if (!isDark) this.settings.previousTheme = this.settings.theme;
+        if (isDark) {
+            this.settings.theme = this.settings.previousTheme || 'default';
+        } else {
+            this.settings.previousTheme = this.settings.theme;
+            this.settings.theme = 'dark';
+        }
         this.saveSettings();
         this.applySettings();
     }
@@ -895,9 +979,307 @@ class UIController {
     }
 }
 
+// --- 2.0: Auto-scroll & TTS ---
+
+class AutoScroll {
+    constructor() {
+        this.scrolling = false;
+        this.speed = 1.0;
+        this.rafId = null;
+        this.readerEl = document.getElementById('reader');
+        this.speedLevels = [0.5, 1.0, 1.5, 2.0, 3.0, 5.0];
+        this.speedIdx = 1;
+        this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
+        if (this.settings.scrollSpeedIdx) this.speedIdx = this.settings.scrollSpeedIdx;
+        this.speed = this.speedLevels[this.speedIdx];
+        this.updateLabel();
+    }
+
+    toggle() {
+        if (this.scrolling) this.stop();
+        else this.start();
+    }
+
+    start() {
+        this.scrolling = true;
+        document.getElementById('btn-scroll').classList.add('active');
+        this.scroll();
+    }
+
+    stop() {
+        this.scrolling = false;
+        document.getElementById('btn-scroll').classList.remove('active');
+        if (this.rafId) cancelAnimationFrame(this.rafId);
+    }
+
+    scroll() {
+        if (!this.scrolling) return;
+        this.readerEl.scrollTop += this.speed * 0.8;
+        // 到底部自动停止
+        const atBottom = this.readerEl.scrollTop + this.readerEl.clientHeight >= this.readerEl.scrollHeight - 5;
+        if (atBottom) { this.stop(); return; }
+        this.rafId = requestAnimationFrame(() => this.scroll());
+    }
+
+    cycleSpeed() {
+        this.speedIdx = (this.speedIdx + 1) % this.speedLevels.length;
+        this.speed = this.speedLevels[this.speedIdx];
+        this.updateLabel();
+        this.settings.scrollSpeedIdx = this.speedIdx;
+        localStorage.setItem('reader_settings_v2', JSON.stringify(this.settings));
+    }
+
+    updateLabel() {
+        document.getElementById('scroll-speed-label').textContent = this.speed.toFixed(1) + 'x';
+    }
+}
+
+class TTSController {
+    constructor() {
+        this.audio = new Audio();
+        this.playing = false;
+        this.loading = false;
+        this.queue = [];
+        this.queueIdx = 0;
+        this.voice = 'zh-CN-XiaoxiaoNeural';
+        this.speed = 1.0;
+        this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
+        this.ttsUrl = this.settings.ttsUrl || '';
+        this.ttsKey = this.settings.ttsKey || '';
+        if (this.settings.ttsVoice) this.voice = this.settings.ttsVoice;
+        if (this.settings.ttsSpeed) this.speed = this.settings.ttsSpeed;
+
+        this.voices = [
+            { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓（女·温暖）' },
+            { id: 'zh-CN-YunxiNeural', name: '云希（男·稳重）' },
+            { id: 'zh-CN-XiaoyiNeural', name: '晓伊（女·亲切）' },
+            { id: 'zh-CN-YunyangNeural', name: '云扬（男·专业）' },
+            { id: 'zh-CN-XiaohanNeural', name: '晓涵（女·清新）' },
+            { id: 'zh-CN-XiaomengNeural', name: '晓梦（女·甜美）' }
+        ];
+
+        // iOS Audio Session: 让音频不受静音开关影响，支持后台播放
+        if ('audioSession' in navigator) {
+            navigator.audioSession.type = 'playback';
+        }
+
+        this.audio.addEventListener('ended', () => this.playNext());
+        this.audio.addEventListener('error', (e) => {
+            console.error('TTS audio error', e);
+            this.loading = false;
+            Toast.show('播放出错，跳过');
+            setTimeout(() => this.playNext(), 500);
+        });
+    }
+
+    saveSettings() {
+        const s = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
+        s.ttsUrl = this.ttsUrl;
+        s.ttsKey = this.ttsKey;
+        s.ttsVoice = this.voice;
+        s.ttsSpeed = this.speed;
+        localStorage.setItem('reader_settings_v2', JSON.stringify(s));
+    }
+
+    isConfigured() {
+        return !!this.ttsUrl;
+    }
+
+    togglePlay() {
+        if (this.playing) { this.pause(); }
+        else if (this.audio.paused && this.audio.src) { this.resume(); }
+        else { this.startReading(); }
+    }
+
+    startReading() {
+        if (!this.isConfigured()) {
+            Toast.show('请先在设置中配置 TTS 地址');
+            uiController.toggleDrawer('drawer-settings');
+            return;
+        }
+        // 获取当前章节文本
+        this.queue = this.collectChapterText();
+        if (this.queue.length === 0) { Toast.show('当前无可朗读内容'); return; }
+        this.queueIdx = 0;
+        this.playCurrent();
+    }
+
+    collectChapterText() {
+        const items = [];
+        const nodes = document.querySelectorAll('#content-wrapper [data-gidx]');
+        let foundCurrent = false;
+        for (const node of nodes) {
+            const gidx = parseInt(node.dataset.gidx);
+            if (gidx === app.currentGlobalIdx) foundCurrent = true;
+            if (!foundCurrent) continue;
+            const text = node.textContent.trim();
+            if (text) items.push({ text, gidx });
+        }
+        // 限制单次队列长度（避免请求过多）
+        return items.slice(0, 30);
+    }
+
+    async playCurrent() {
+        if (this.queueIdx >= this.queue.length) {
+            this.playing = false;
+            this.updatePlayButton();
+            Toast.show('本段朗读完毕');
+            return;
+        }
+        const item = this.queue[this.queueIdx];
+        this.loading = true;
+        this.updatePlayButton();
+        try {
+            const audioUrl = await this.fetchTTS(item.text);
+            this.audio.src = audioUrl;
+            await this.audio.play();
+            this.playing = true;
+            this.loading = false;
+            this.updatePlayButton();
+            this.setupMediaSession(item.text);
+            // 滚动到当前段落
+            this.scrollToParagraph(item.gidx);
+        } catch (e) {
+            console.error('TTS error:', e);
+            this.loading = false;
+            Toast.show('语音合成失败: ' + e.message);
+            this.playing = false;
+            this.updatePlayButton();
+        }
+    }
+
+    async fetchTTS(text) {
+        const url = this.ttsUrl.replace(/\/$/, '') + '/v1/audio/speech';
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.ttsKey) headers['Authorization'] = 'Bearer ' + this.ttsKey;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                model: 'tts-1',
+                input: text.slice(0, 2000),
+                voice: this.voice,
+                speed: this.speed
+            })
+        });
+        if (!res.ok) {
+            const err = await res.text();
+            throw new Error(`TTS ${res.status}: ${err.slice(0, 100)}`);
+        }
+        const blob = await res.blob();
+        return URL.createObjectURL(blob);
+    }
+
+    playNext() {
+        // 释放上一段的 blob URL
+        if (this.audio.src.startsWith('blob:')) URL.revokeObjectURL(this.audio.src);
+        this.queueIdx++;
+        // 如果快到队列末尾，补充后续内容
+        if (this.queueIdx >= this.queue.length - 5) {
+            const lastGidx = this.queue.length > 0 ? this.queue[this.queue.length - 1].gidx : app.currentGlobalIdx;
+            const more = this.collectMoreText(lastGidx);
+            this.queue.push(...more);
+        }
+        this.playCurrent();
+    }
+
+    collectMoreText(afterGidx) {
+        const items = [];
+        const nodes = document.querySelectorAll('#content-wrapper [data-gidx]');
+        let foundAfter = false;
+        for (const node of nodes) {
+            const gidx = parseInt(node.dataset.gidx);
+            if (gidx <= afterGidx) continue;
+            const text = node.textContent.trim();
+            if (text) items.push({ text, gidx });
+        }
+        return items.slice(0, 30);
+    }
+
+    pause() {
+        this.playing = false;
+        this.audio.pause();
+        this.updatePlayButton();
+    }
+
+    resume() {
+        this.playing = true;
+        this.audio.play();
+        this.updatePlayButton();
+    }
+
+    stop() {
+        this.playing = false;
+        this.audio.pause();
+        this.audio.currentTime = 0;
+        if (this.audio.src.startsWith('blob:')) URL.revokeObjectURL(this.audio.src);
+        this.audio.src = '';
+        this.queue = [];
+        this.queueIdx = 0;
+        this.updatePlayButton();
+    }
+
+    updatePlayButton() {
+        const btn = document.getElementById('btn-tts-play');
+        if (this.loading) {
+            btn.innerHTML = '<div style="width:18px;height:18px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;"></div>';
+        } else if (this.playing) {
+            btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
+        } else {
+            btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+        }
+    }
+
+    scrollToParagraph(gidx) {
+        const node = document.querySelector(`#content-wrapper [data-gidx="${gidx}"]`);
+        if (node) {
+            node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    setupMediaSession(title) {
+        if (!('mediaSession' in navigator)) return;
+        const ch = app.chMap.find(c => c.chapterIdx === app.currentChapterIdx);
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: title.slice(0, 30) + (title.length > 30 ? '...' : ''),
+            artist: ch ? ch.title : '朗读中',
+            album: app.currentBookName || '听书'
+        });
+        navigator.mediaSession.setActionHandler('play', () => this.resume());
+        navigator.mediaSession.setActionHandler('pause', () => this.pause());
+    }
+
+    renderVoiceGrid() {
+        const grid = document.getElementById('tts-voice-grid');
+        grid.innerHTML = this.voices.map(v =>
+            `<div class="tts-voice-btn ${v.id === this.voice ? 'active' : ''}" data-voice="${v.id}">${v.name}</div>`
+        ).join('');
+        grid.querySelectorAll('.tts-voice-btn').forEach(btn => {
+            btn.onclick = () => {
+                this.voice = btn.dataset.voice;
+                grid.querySelectorAll('.tts-voice-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.saveSettings();
+            };
+        });
+        document.getElementById('tts-speed-val').textContent = this.speed.toFixed(1) + 'x';
+    }
+
+    adjustSpeed(delta) {
+        const newSpeed = Math.round((this.speed + delta) * 10) / 10;
+        if (newSpeed >= 0.5 && newSpeed <= 2.0) {
+            this.speed = newSpeed;
+            document.getElementById('tts-speed-val').textContent = newSpeed.toFixed(1) + 'x';
+            this.saveSettings();
+        }
+    }
+}
+
 // Init
 const app = new ReaderApp();
 const uiController = new UIController();
+const autoScroll = new AutoScroll();
+const tts = new TTSController();
 
 window.addEventListener('DOMContentLoaded', async () => {
     await app.init();
