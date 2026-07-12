@@ -548,6 +548,12 @@ class ReaderApp {
     }
 
     async importBook(file) {
+        // 文件大小预检查 (50MB)
+        if (file.size > 50 * 1024 * 1024) {
+            Toast.show('文件过大（超过50MB），请选择较小的文件');
+            return;
+        }
+
         this.loadingText.textContent = '正在本地解析...'; 
         this.loadingMask.classList.remove('hidden');
         
@@ -565,24 +571,44 @@ class ReaderApp {
                 timestamp: Date.now() 
             });
             
-            this.loadingText.textContent = '正在上传...';
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('metadata', JSON.stringify({
-                id: bookId,
-                name: parsed.bookName,
-                wordCount: parsed.wordCount,
-                totalChapters: parsed.chMap.length,
-                totalParagraphs: parsed.paragraphs.length,
-                chMap: JSON.stringify(parsed.chMap),
-                firstChapterTitle: (parsed.chMap.length > 0 && parsed.chMap[0].title) ? parsed.chMap[0].title : '开始阅读'
-            }));
+            // Step 1: 流式上传文件到 R2 (raw body, 不用 FormData 避免 CPU 超限)
+            this.loadingText.textContent = '正在上传文件...';
+            const uploadRes = await fetch('/api/books', { 
+                method: 'POST', 
+                headers: { 'X-Book-Id': bookId, 'Content-Type': 'text/plain' },
+                body: file 
+            });
+            if (!uploadRes.ok) {
+                const errData = await uploadRes.json().catch(() => ({}));
+                throw new Error(errData.error || `上传失败 (${uploadRes.status})`);
+            }
             
-            const res = await fetch('/api/books', { method:'POST', body:formData }).then(r=>r.json());
+            // Step 2: 保存元数据到 D1 (小 JSON, 不触发 CPU 限制)
+            this.loadingText.textContent = '正在保存元数据...';
+            const metaRes = await fetch('/api/books/meta', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: bookId,
+                    name: parsed.bookName,
+                    wordCount: parsed.wordCount,
+                    totalChapters: parsed.chMap.length,
+                    totalParagraphs: parsed.paragraphs.length,
+                    chMap: JSON.stringify(parsed.chMap),
+                    firstChapterTitle: (parsed.chMap.length > 0 && parsed.chMap[0].title) ? parsed.chMap[0].title : '开始阅读'
+                })
+            });
+            if (!metaRes.ok) {
+                const errData = await metaRes.json().catch(() => ({}));
+                throw new Error(errData.error || `保存元数据失败 (${metaRes.status})`);
+            }
             
-            if (res.success && res.id) {
+            const metaResult = await metaRes.json();
+            if (metaResult.success) {
                 await this.renderBookList();
                 Toast.show('导入成功');
+            } else {
+                throw new Error(metaResult.error || '保存元数据失败');
             }
         } catch (err) { 
             console.error(err);
