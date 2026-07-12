@@ -10,9 +10,16 @@
 <script>
   (function() {
     try {
-      const s = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{"theme":"default"}');
-      document.documentElement.setAttribute('data-theme', s.theme);
-    } catch(e) {}
+      // 2.0 数据迁移：修复旧版 bug 导致的 previousTheme='dark' 脏数据
+      let s = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
+      if (s.previousTheme === 'dark' || s.previousTheme === s.theme) {
+        s.previousTheme = 'default';
+      }
+      localStorage.setItem('reader_settings_v2', JSON.stringify(s));
+      document.documentElement.setAttribute('data-theme', s.theme || 'default');
+    } catch(e) {
+      document.documentElement.setAttribute('data-theme', 'default');
+    }
   })();
 </script>
 
@@ -55,7 +62,7 @@ body.ui-visible #header { transform: translateY(0); }
 #drawer-toc .item { padding: 14px 16px; border-radius: 8px; font-size: 15px; color: var(--text-secondary); cursor: pointer; white-space: normal; line-height: 1.5; margin-bottom: 4px; transition: all .2s; }
 #drawer-toc .item:hover { background: var(--card); color: var(--text); }
 #drawer-toc .item.active { background: var(--accent); color: #fff; font-weight: 500; box-shadow: 0 4px 12px rgba(156, 129, 99, 0.2); }
-#drawer-settings { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+#drawer-settings { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 #drawer-settings.active { transform: translateY(0); }
 .setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
 .setting-label { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
@@ -178,6 +185,7 @@ body.ui-visible #header { transform: translateY(0); }
   <div class="setting-row"><span class="setting-label">主题</span><div class="theme-dots"><div class="theme-dot" data-t="white" title="极简白"></div><div class="theme-dot" data-t="green" title="护眼绿"></div><div class="theme-dot" data-t="default" title="暖灰纸"></div><div class="theme-dot" data-t="sepia" title="羊皮纸"></div><div class="theme-dot" data-t="dark" title="深邃夜"></div></div></div>
   <div class="setting-row"><span class="setting-label">TTS 地址</span><div class="setting-btns"><input id="tts-url-input" type="text" placeholder="https://your-tts-worker.workers.dev" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
   <div class="setting-row"><span class="setting-label">TTS 密钥</span><div class="setting-btns"><input id="tts-key-input" type="password" placeholder="留空则不验证" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
+  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 2.0</span></div>
 </div>
 
 <!-- 2.0: Auto-scroll & TTS floating bar -->
@@ -788,6 +796,11 @@ class UIController {
         this.contentWrapper = document.getElementById('content-wrapper');
         this.saveTimer = null;
         this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{"fontSize":18,"lineHeight":1.9,"theme":"default","previousTheme":"default"}');
+        // 2.0 数据迁移：修复旧版 previousTheme='dark' 脏数据
+        if (this.settings.previousTheme === 'dark' || this.settings.previousTheme === this.settings.theme) {
+            this.settings.previousTheme = 'default';
+            this.saveSettings();
+        }
     }
 
     init() {
