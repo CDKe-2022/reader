@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>极简阅读器 2.0</title>
+<title>极简阅读器 2.3</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F4F1EA">
 
@@ -80,7 +80,7 @@ body.ui-visible #header { transform: translateY(0); }
 .theme-dot[data-t="sepia"] { background: #f4ecd8; }
 .theme-dot[data-t="dark"] { background: #161618; border: 1px solid #333; }
 
-/* 2.0 1Bookshelf UI */
+/* 2.0 Bookshelf UI */
 #bookshelf { padding: 24px; padding-top: calc(24px + var(--sat)); max-width: 800px; margin: 0 auto; }
 .shelf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; gap: 12px; }
 .shelf-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; flex-shrink: 0; }
@@ -118,9 +118,11 @@ body.ui-visible #header { transform: translateY(0); }
 .toast { background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 24px; font-size: 14px; opacity: 0; transform: translateY(20px); transition: all .3s; text-align: center; max-width: 80vw; box-shadow: 0 4px 12px rgba(0,0,0,0.1); backdrop-filter: blur(4px); }
 .toast.show { opacity: 1; transform: translateY(0); }
 
-/* 2.0: Auto-scroll & TTS floating bar */
+/* 2.0: Auto-scroll & TTS floating bar — 平时隐藏，仅朗读/滚动时显示 */
 #float-bar { position: fixed; bottom: calc(16px + var(--sab)); left: 50%; z-index: 95; display: flex; align-items: center; gap: 8px; background: var(--header-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--border); border-radius: 28px; padding: 8px 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(20px); transition: all .35s cubic-bezier(.4,0,.2,1); max-width: 92vw; }
 #float-bar.visible { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+/* 朗读中自动隐藏，3秒无操作淡出，点击屏幕重新显示 */
+#float-bar.auto-hide { opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(20px); pointer-events: none; }
 #float-bar .fb-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; }
 #float-bar .fb-btn:hover { background: var(--border); }
 #float-bar .fb-btn.active { background: var(--accent); color: #fff; }
@@ -185,13 +187,13 @@ body.ui-visible #header { transform: translateY(0); }
   <div class="setting-row"><span class="setting-label">主题</span><div class="theme-dots"><div class="theme-dot" data-t="white" title="极简白"></div><div class="theme-dot" data-t="green" title="护眼绿"></div><div class="theme-dot" data-t="default" title="暖灰纸"></div><div class="theme-dot" data-t="sepia" title="羊皮纸"></div><div class="theme-dot" data-t="dark" title="深邃夜"></div></div></div>
   <div class="setting-row"><span class="setting-label">TTS 地址</span><div class="setting-btns"><input id="tts-url-input" type="text" placeholder="https://your-tts-worker.workers.dev" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
   <div class="setting-row"><span class="setting-label">TTS 密钥</span><div class="setting-btns"><input id="tts-key-input" type="password" placeholder="留空则不验证" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
-  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 2.0</span></div>
+  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 2.3</span></div>
 </div>
 
 <!-- 2.0: Auto-scroll & TTS floating bar -->
 <div id="float-bar">
   <button class="fb-btn" id="btn-scroll" title="自动滚动">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
   </button>
   <span class="fb-speed" id="scroll-speed-label">1.0x</span>
   <div class="fb-divider"></div>
@@ -583,7 +585,6 @@ class ReaderApp {
             const meta = await this.initBook(id);
             document.getElementById('bookshelf').classList.add('hidden');
             document.getElementById('reader').classList.remove('hidden');
-            document.getElementById('float-bar').classList.add('visible');
             
             document.getElementById('content-wrapper').innerHTML = ''; 
             this.windowStart = 0; this.windowEnd = 0;
@@ -818,9 +819,9 @@ class UIController {
             this.saveProgress(true); 
             autoScroll.stop();
             tts.stop();
+            document.getElementById('float-bar').classList.remove('visible', 'auto-hide');
             app.bookId = null; app._localParagraphs = []; app.chMap = []; 
             document.getElementById('reader').classList.add('hidden'); 
-            document.getElementById('float-bar').classList.remove('visible');
             document.getElementById('bookshelf').classList.remove('hidden'); 
             app.renderBookList(); 
         };
@@ -859,8 +860,15 @@ class UIController {
         this.contentWrapper.addEventListener('touchmove', e => { if (Math.abs(e.touches[0].clientX - touchStartX) > 15 || Math.abs(e.touches[0].clientY - touchStartY) > 15) isSwiping = true; }, { passive: true });
         this.contentWrapper.addEventListener('click', e => {
             if (isSwiping || window.getSelection().toString().length > 0) return;
-            if (e.target.closest('button, a, input, #drawer-settings')) return;
-            document.body.classList.toggle('ui-visible');
+            if (e.target.closest('button, a, input, #drawer-settings, #float-bar')) return;
+            // 顶部栏和浮动栏同时出现/消失
+            const isVisible = document.body.classList.toggle('ui-visible');
+            const fb = document.getElementById('float-bar');
+            if (isVisible) {
+                this.showFloatBar();
+            } else {
+                this.hideFloatBar();
+            }
         });
 
         // Settings Buttons
@@ -941,6 +949,32 @@ class UIController {
         this.applySettings();
     }
 
+    // 2.0: 浮动栏显示 + 自动隐藏逻辑
+    showFloatBar() {
+        const fb = document.getElementById('float-bar');
+        fb.classList.add('visible');
+        fb.classList.remove('auto-hide');
+        clearTimeout(this._floatBarTimer);
+        // 3秒后自动淡出（朗读/滚动中也会淡出，点击屏幕重新显示）
+        this._floatBarTimer = setTimeout(() => {
+            if (tts.playing || autoScroll.scrolling) {
+                fb.classList.add('auto-hide');
+            } else {
+                fb.classList.remove('visible');
+            }
+        }, 3000);
+    }
+
+    hideFloatBar() {
+        const fb = document.getElementById('float-bar');
+        clearTimeout(this._floatBarTimer);
+        if (tts.playing || autoScroll.scrolling) {
+            fb.classList.add('auto-hide');
+        } else {
+            fb.classList.remove('visible');
+        }
+    }
+
     toggleDrawer(id) {
         const el = document.getElementById(id);
         const active = el.classList.contains('active');
@@ -1003,6 +1037,7 @@ class AutoScroll {
     start() {
         this.scrolling = true;
         document.getElementById('btn-scroll').classList.add('active');
+        uiController.showFloatBar();
         this.scroll();
     }
 
@@ -1010,6 +1045,7 @@ class AutoScroll {
         this.scrolling = false;
         document.getElementById('btn-scroll').classList.remove('active');
         if (this.rafId) cancelAnimationFrame(this.rafId);
+        uiController.hideFloatBar();
     }
 
     scroll() {
@@ -1101,6 +1137,7 @@ class TTSController {
         this.queue = this.collectChapterText();
         if (this.queue.length === 0) { Toast.show('当前无可朗读内容'); return; }
         this.queueIdx = 0;
+        uiController.showFloatBar();
         this.playCurrent();
     }
 
@@ -1130,21 +1167,45 @@ class TTSController {
         this.loading = true;
         this.updatePlayButton();
         try {
-            const audioUrl = await this.fetchTTS(item.text);
+            // 优先使用预加载的音频，消除段落间等待
+            let audioUrl;
+            if (this._prefetchMap && this._prefetchMap.has(this.queueIdx)) {
+                audioUrl = this._prefetchMap.get(this.queueIdx);
+                this._prefetchMap.delete(this.queueIdx);
+            } else {
+                audioUrl = await this.fetchTTS(item.text);
+            }
             this.audio.src = audioUrl;
             await this.audio.play();
             this.playing = true;
             this.loading = false;
             this.updatePlayButton();
             this.setupMediaSession(item.text);
-            // 滚动到当前段落
             this.scrollToParagraph(item.gidx);
+            // 预加载下一段：当前播放时同时请求下一句，播完无缝衔接
+            this.prefetchNext();
         } catch (e) {
             console.error('TTS error:', e);
             this.loading = false;
             Toast.show('语音合成失败: ' + e.message);
             this.playing = false;
             this.updatePlayButton();
+        }
+    }
+
+    // 预加载下一段音频，消除段落间停顿
+    async prefetchNext() {
+        const nextIdx = this.queueIdx + 1;
+        if (nextIdx >= this.queue.length) return;
+        if (this._prefetchMap && this._prefetchMap.has(nextIdx)) return; // 已预加载
+        if (!this._prefetchMap) this._prefetchMap = new Map();
+
+        const nextItem = this.queue[nextIdx];
+        try {
+            const url = await this.fetchTTS(nextItem.text);
+            this._prefetchMap.set(nextIdx, url);
+        } catch (e) {
+            // 预加载失败无所谓，到时候正常请求
         }
     }
 
@@ -1180,6 +1241,8 @@ class TTSController {
             const more = this.collectMoreText(lastGidx);
             this.queue.push(...more);
         }
+        // 继续预加载下一段
+        this.prefetchNext();
         this.playCurrent();
     }
 
@@ -1217,6 +1280,7 @@ class TTSController {
         this.queue = [];
         this.queueIdx = 0;
         this.updatePlayButton();
+        uiController.hideFloatBar();
     }
 
     updatePlayButton() {
