@@ -15,7 +15,7 @@ export default {
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, X-Book-Id',
     };
 
     if (request.method === 'OPTIONS') {
@@ -34,54 +34,67 @@ export default {
         return Response.json(results, { headers: corsHeaders });
       }
 
-      // [POST] 导入新书 (v1.2 修改：接收 FormData)
+      // [POST] 上传书籍文件 (v1.5: raw body streaming, 不用 FormData 避免 CPU 超限)
       if (path === '/api/books' && request.method === 'POST') {
-        const formData = await request.formData();
-        
-        const file = formData.get('file');
-        const metadataStr = formData.get('metadata');
-        
-        if (!file || !metadataStr) {
-          return new Response(JSON.stringify({ error: 'Missing file or metadata' }), { 
+        const bookId = request.headers.get('X-Book-Id');
+        if (!bookId) {
+          return new Response(JSON.stringify({ error: 'Missing X-Book-Id header' }), { 
             status: 400, 
             headers: { 'Content-Type': 'application/json', ...corsHeaders } 
           });
         }
 
-        // 文件大小限制检查 (例如 10MB)
-        if (file.size > 10 * 1024 * 1024) {
-             return new Response(JSON.stringify({ error: 'File too large (Max 10MB)' }), { 
-                status: 413, 
-                headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-            });
+        // 文件大小限制检查 (50MB，Cloudflare Free 计划上限 100MB)
+        const contentLength = parseInt(request.headers.get('Content-Length') || '0');
+        if (contentLength > 50 * 1024 * 1024) {
+          return new Response(JSON.stringify({ error: 'File too large (Max 50MB)' }), { 
+            status: 413, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+          });
         }
 
-        const metadata = JSON.parse(metadataStr);
-        // 前端会生成 ID，这里直接使用
-        const bookId = metadata.id || crypto.randomUUID(); 
+        const r2_key = `txt/${bookId}.txt`;
+        // 直接将请求体流式存入 R2，不做任何解析
+        await bucket.put(r2_key, request.body);
+        
+        return Response.json({ success: true, id: bookId }, { headers: corsHeaders });
+      }
+
+      // [POST] 保存书籍元数据 (与文件上传分离，避免 FormData CPU 超限)
+      if (path === '/api/books/meta' && request.method === 'POST') {
+        const metadata = await request.json();
+        const bookId = metadata.id || crypto.randomUUID();
         const r2_key = `txt/${bookId}.txt`;
         
-        // 1. 直接将文件流存入 R2 (Worker 不解析，只搬运)
-        await bucket.put(r2_key, file);
+        // 检查是否已存在记录（文件已上传但元数据未保存）
+        const existing = await db.prepare('SELECT id FROM books WHERE id = ?').bind(bookId).first();
         
-        // 2. 将元数据存入 D1
-        await db.prepare(`
-          INSERT INTO books (
-            id, name, r2_key, word_count, total_chapters, total_paragraphs, 
-            ch_map, current_chapter_title, import_time, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(
-            bookId, 
-            metadata.name, 
-            r2_key, 
-            metadata.wordCount, 
-            metadata.totalChapters, 
-            metadata.totalParagraphs,
-            metadata.chMap,
-            metadata.firstChapterTitle || '开始阅读',
-            Date.now(), // import_time
-            Date.now()  // sort_order (默认置顶时间)
-        ).run();
+        if (existing) {
+          // 更新已有记录
+          await db.prepare(`
+            UPDATE books SET
+              name = ?, word_count = ?, total_chapters = ?, total_paragraphs = ?,
+              ch_map = ?, current_chapter_title = ?, import_time = ?, sort_order = ?
+            WHERE id = ?
+          `).bind(
+            metadata.name, metadata.wordCount, metadata.totalChapters, metadata.totalParagraphs,
+            metadata.chMap, metadata.firstChapterTitle || '开始阅读',
+            Date.now(), Date.now(), bookId
+          ).run();
+        } else {
+          // 新增记录
+          await db.prepare(`
+            INSERT INTO books (
+              id, name, r2_key, word_count, total_chapters, total_paragraphs, 
+              ch_map, current_chapter_title, import_time, sort_order
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            bookId, metadata.name, r2_key, 
+            metadata.wordCount, metadata.totalChapters, metadata.totalParagraphs,
+            metadata.chMap, metadata.firstChapterTitle || '开始阅读',
+            Date.now(), Date.now()
+          ).run();
+        }
         
         return Response.json({ success: true, id: bookId }, { headers: corsHeaders });
       }
