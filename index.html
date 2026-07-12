@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>极简阅读器 2.3</title>
+<title>极简阅读器 2.4</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F4F1EA">
 
@@ -26,9 +26,10 @@
 <style>
 /* --- 2.0 CSS --- */
 :root { --sat: env(safe-area-inset-top); --sab: env(safe-area-inset-bottom); --header-h: 56px; --content-max-w: 720px; --bg: #F4F1EA; --text: #2D2D2D; --text-secondary: #888888; --card: rgba(255,255,255,0.5); --border: rgba(0,0,0,0.04); --accent: #9C8163; --header-bg: rgba(244, 241, 234, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
-[data-theme="white"] { --bg: #FFFFFF; --text: #1A1A1A; --card: rgba(0,0,0,0.02); --border: rgba(0,0,0,0.06); --accent: #0055A4; --header-bg: rgba(255, 255, 255, 0.85); }
-[data-theme="green"] { --bg: #cce8cf; --text: #2f3e2f; --text-secondary: #5c705c; --card: rgba(255,255,255,0.4); --border: rgba(0,0,0,0.05); --accent: #4a7c59; --header-bg: rgba(204, 232, 207, 0.85); }
-[data-theme="sepia"] { --bg: #f4ecd8; --text: #4a4035; --text-secondary: #8a7d6b; --card: rgba(255,255,255,0.4); --border: rgba(0,0,0,0.05); --accent: #8d6e63; --header-bg: rgba(244, 236, 216, 0.85); }
+[data-theme="default"] { --bg: #F4F1EA; --text: #2D2D2D; --text-secondary: #888888; --card: rgba(255,255,255,0.5); --border: rgba(0,0,0,0.04); --accent: #9C8163; --header-bg: rgba(244, 241, 234, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
+[data-theme="white"] { --bg: #FFFFFF; --text: #1A1A1A; --text-secondary: #666; --card: rgba(0,0,0,0.02); --border: rgba(0,0,0,0.06); --accent: #0055A4; --header-bg: rgba(255, 255, 255, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
+[data-theme="green"] { --bg: #cce8cf; --text: #2f3e2f; --text-secondary: #5c705c; --card: rgba(255,255,255,0.4); --border: rgba(0,0,0,0.05); --accent: #4a7c59; --header-bg: rgba(204, 232, 207, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
+[data-theme="sepia"] { --bg: #f4ecd8; --text: #4a4035; --text-secondary: #8a7d6b; --card: rgba(255,255,255,0.4); --border: rgba(0,0,0,0.05); --accent: #8d6e63; --header-bg: rgba(244, 236, 216, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
 [data-theme="dark"] { --bg: #161618; --text: #D4D4D8; --text-secondary: #71717A; --card: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.08); --accent: #D4AF37; --header-bg: rgba(22, 22, 24, 0.85); --scrollbar-thumb: rgba(255,255,255,0.15); --scrollbar-thumb-hover: rgba(255,255,255,0.3); }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -139,6 +140,9 @@ body.ui-visible #header { transform: translateY(0); }
 .tts-voice-btn:hover { border-color: var(--accent); }
 .tts-voice-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
+/* 朗读段落高亮 */
+#content-wrapper [data-gidx].tts-reading { background: var(--card); border-radius: 8px; box-shadow: inset 3px 0 0 var(--accent); padding-left: 12px; margin-left: -12px; transition: background .3s; }
+
 @media (max-width: 600px) { 
   #content-wrapper { font-size: 16px; padding-left: 20px; padding-right: 20px; line-height: 1.8; } 
   #content-wrapper .chapter-title { font-size: 20px; } 
@@ -187,7 +191,7 @@ body.ui-visible #header { transform: translateY(0); }
   <div class="setting-row"><span class="setting-label">主题</span><div class="theme-dots"><div class="theme-dot" data-t="white" title="极简白"></div><div class="theme-dot" data-t="green" title="护眼绿"></div><div class="theme-dot" data-t="default" title="暖灰纸"></div><div class="theme-dot" data-t="sepia" title="羊皮纸"></div><div class="theme-dot" data-t="dark" title="深邃夜"></div></div></div>
   <div class="setting-row"><span class="setting-label">TTS 地址</span><div class="setting-btns"><input id="tts-url-input" type="text" placeholder="https://your-tts-worker.workers.dev" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
   <div class="setting-row"><span class="setting-label">TTS 密钥</span><div class="setting-btns"><input id="tts-key-input" type="password" placeholder="留空则不验证" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
-  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 2.3</span></div>
+  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 2.4</span></div>
 </div>
 
 <!-- 2.0: Auto-scroll & TTS floating bar -->
@@ -1050,7 +1054,7 @@ class AutoScroll {
 
     scroll() {
         if (!this.scrolling) return;
-        this.readerEl.scrollTop += this.speed * 0.8;
+        this.readerEl.scrollTo(0, this.readerEl.scrollTop + this.speed * 0.8);
         // 到底部自动停止
         const atBottom = this.readerEl.scrollTop + this.readerEl.clientHeight >= this.readerEl.scrollHeight - 5;
         if (atBottom) { this.stop(); return; }
@@ -1079,6 +1083,9 @@ class TTSController {
         this.queueIdx = 0;
         this.voice = 'zh-CN-XiaoxiaoNeural';
         this.speed = 1.0;
+        this._genToken = 0; // 生成令牌：stop() 时递增，异步操作完成后检查是否过期
+        this._prefetchMap = null;
+        this._currentHighlightEl = null;
         this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
         this.ttsUrl = this.settings.ttsUrl || '';
         this.ttsKey = this.settings.ttsKey || '';
@@ -1160,9 +1167,11 @@ class TTSController {
         if (this.queueIdx >= this.queue.length) {
             this.playing = false;
             this.updatePlayButton();
+            this.clearHighlight();
             Toast.show('本段朗读完毕');
             return;
         }
+        const myToken = this._genToken;
         const item = this.queue[this.queueIdx];
         this.loading = true;
         this.updatePlayButton();
@@ -1175,16 +1184,28 @@ class TTSController {
             } else {
                 audioUrl = await this.fetchTTS(item.text);
             }
+            // 关键：异步等待后检查是否已被 stop 或跳段
+            if (myToken !== this._genToken) {
+                URL.revokeObjectURL(audioUrl);
+                return;
+            }
             this.audio.src = audioUrl;
             await this.audio.play();
+            // 再次检查（play 也是异步的）
+            if (myToken !== this._genToken) {
+                this.audio.pause();
+                return;
+            }
             this.playing = true;
             this.loading = false;
             this.updatePlayButton();
             this.setupMediaSession(item.text);
+            this.highlightParagraph(item.gidx);
             this.scrollToParagraph(item.gidx);
             // 预加载下一段：当前播放时同时请求下一句，播完无缝衔接
             this.prefetchNext();
         } catch (e) {
+            if (myToken !== this._genToken) return; // 已被 stop
             console.error('TTS error:', e);
             this.loading = false;
             Toast.show('语音合成失败: ' + e.message);
@@ -1272,13 +1293,21 @@ class TTSController {
     }
 
     stop() {
+        this._genToken++; // 让所有进行中的异步操作失效
         this.playing = false;
+        this.loading = false;
         this.audio.pause();
         this.audio.currentTime = 0;
         if (this.audio.src.startsWith('blob:')) URL.revokeObjectURL(this.audio.src);
         this.audio.src = '';
+        // 清理预加载的 blob URL，防止内存泄漏
+        if (this._prefetchMap) {
+            this._prefetchMap.forEach(url => URL.revokeObjectURL(url));
+            this._prefetchMap.clear();
+        }
         this.queue = [];
         this.queueIdx = 0;
+        this.clearHighlight();
         this.updatePlayButton();
         uiController.hideFloatBar();
     }
@@ -1301,6 +1330,41 @@ class TTSController {
         }
     }
 
+    // 高亮当前朗读的段落
+    highlightParagraph(gidx) {
+        this.clearHighlight();
+        const node = document.querySelector(`#content-wrapper [data-gidx="${gidx}"]`);
+        if (node) {
+            node.classList.add('tts-reading');
+            this._currentHighlightEl = node;
+        }
+    }
+
+    clearHighlight() {
+        if (this._currentHighlightEl) {
+            this._currentHighlightEl.classList.remove('tts-reading');
+            this._currentHighlightEl = null;
+        }
+    }
+
+    // 跳到上一段
+    jumpToParagraph(delta) {
+        const newIdx = this.queueIdx + delta;
+        if (newIdx < 0) {
+            Toast.show('已经是第一段');
+            return;
+        }
+        if (newIdx >= this.queue.length) {
+            Toast.show('已经是最后一段');
+            return;
+        }
+        this._genToken++; // 取消当前异步操作
+        this.queueIdx = newIdx;
+        if (this.audio.src.startsWith('blob:')) URL.revokeObjectURL(this.audio.src);
+        this.audio.pause();
+        this.playCurrent();
+    }
+
     setupMediaSession(title) {
         if (!('mediaSession' in navigator)) return;
         const ch = app.chMap.find(c => c.chapterIdx === app.currentChapterIdx);
@@ -1311,6 +1375,8 @@ class TTSController {
         });
         navigator.mediaSession.setActionHandler('play', () => this.resume());
         navigator.mediaSession.setActionHandler('pause', () => this.pause());
+        navigator.mediaSession.setActionHandler('previoustrack', () => this.jumpToParagraph(-1));
+        navigator.mediaSession.setActionHandler('nexttrack', () => this.jumpToParagraph(1));
     }
 
     renderVoiceGrid() {
