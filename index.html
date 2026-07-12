@@ -233,43 +233,131 @@ class Utils {
         });
     }
 
+    static decodeText(buffer) {
+        const bytes = new Uint8Array(buffer);
+        // UTF-8 BOM
+        if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+            return new TextDecoder('utf-8').decode(bytes.slice(3));
+        }
+        // UTF-16 LE BOM
+        if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+            return new TextDecoder('utf-16le').decode(bytes.slice(2));
+        }
+        // UTF-16 BE BOM
+        if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+            return new TextDecoder('utf-16be').decode(bytes.slice(2));
+        }
+        // Try UTF-8 (fatal mode - throws on invalid sequences)
+        try {
+            return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+        } catch (e) {
+            // Not valid UTF-8, fall back to GBK (common for Chinese novels)
+            return new TextDecoder('gbk').decode(bytes);
+        }
+    }
+
     static parseTextAsync(text, fileName) {
         return new Promise((resolve, reject) => {
-            // v1.4 Fix: Pass regex string, not object
-            const regexSource = "^\\s*(第[零一二三四五六七八九十百千万0-9]+[章节回部集卷][^。\\n]{0,40}?)\\s*$";
-            const regexFlags = "i";
+            // v1.5: Multi-regex array with priority + scoring system
+            const chapterPatterns = [
+                // 1. 标准章节（最高优先级）：第一章、第一百二十章、第一卷……
+                { source: "^(?:\\s{0,4})第\\s*(?:\\d+|[０-９]+|[零〇○一二三四五六七八九十百千万两壹贰叁肆伍陆柒捌玖拾佰仟]+)\\s*(?:章|节|回|卷|部|篇|集|季)\\s*(?:[：:\\-—]\\s*|\\s+)?[^\\r\\n]{0,40}$", flags: "i", weight: 60 },
+                // 2. 特殊章节：序章、楔子、终章、番外、后记……
+                { source: "^(?:\\s{0,4})(?:序章|序言|序|序曲|序幕|楔子|引子|前言|正文|尾声|终章|终幕|大结局|后记|番外(?:篇)?|外传|卷首|卷首语|卷末|卷终|完本感言|完结感言|上架感言|作者的话|作品相关|请假条|单章|通知)(?:\\s*(?:\\d+|[零〇○一二三四五六七八九十]))?(?:\\s*[：:\\-—]?\\s*)?[^\\r\\n]{0,30}$", flags: "i", weight: 60 },
+                // 3. 英文章节：Chapter 1、Part II、Book Three、Volume 3……
+                { source: "^(?:chapter|part|book|volume|vol\\.?)\\s+(?:\\d+|[IVXLCDM]+|[A-Za-z]+)(?:\\s*(?:[:：\\-—]|\\s)\\s*[^\\r\\n]{0,40})?$", flags: "i", weight: 60 },
+                // 4. 括号包装章节（强制成对括号）：【第一章】、《终章》……
+                { source: "^[\\[【〖《〔〈『「]\\s*(?:(?:第\\s*(?:\\d+|[０-９]+|[零〇○一二三四五六七八九十百千万两壹贰叁肆伍陆柒捌玖拾佰仟]+)\\s*(?:章|节|回|卷|部|篇|集|季))|(?:序章|序言|楔子|引子|前言|正文|尾声|终章|终幕|大结局|后记|番外(?:篇)?|外传|卷首|卷末|完本感言))[^\\r\\n]{0,30}\\s*[\\]】〗》〕〉』」]$", flags: "i", weight: 55 },
+                // 5. 纯数字章节（最低优先级，弱信号）：001、002 惊变……
+                { source: "^(?:\\s{0,4})\\d{1,4}(?:[.．、])?(?:\\s+[^\\r\\n]{0,30})?$", flags: "i", weight: 40 }
+            ];
 
             const workerScript = `
+                function normalizeTitle(title) {
+                    return title
+                        .replace(/^[\\[【〖《〔〈『「]\\s*/, '')
+                        .replace(/\\s*[\\]】〗》〕〉』」]$/, '')
+                        .replace(/[：:\\-—]+$/, '')
+                        .trim();
+                }
+
                 self.onmessage = function(e) {
-                    const { text, fileName, rSource, rFlags } = e.data;
+                    const { text, fileName, patterns } = e.data;
                     try {
-                        const CHAPTER_REGEX = new RegExp(rSource, rFlags);
+                        const CHAPTER_REGEXES = patterns.map(function(item) {
+                            return { regex: new RegExp(item.source, item.flags), weight: item.weight };
+                        });
+
+                        function matchChapter(line) {
+                            for (let j = 0; j < CHAPTER_REGEXES.length; j++) {
+                                const m = line.match(CHAPTER_REGEXES[j].regex);
+                                if (m) return { match: m, weight: CHAPTER_REGEXES[j].weight };
+                            }
+                            return null;
+                        }
+
                         const lines = text.split(/\\r?\\n/);
-                        const paragraphs = []; const chMap = []; let currentChapterIdx = -1;
-                        let wordCount = 0; 
-                        
+                        const paragraphs = [];
+                        const chMap = [];
+                        let currentChapterIdx = -1;
+                        let wordCount = 0;
+                        const SCORE_THRESHOLD = 75;
+
                         for (let i = 0; i < lines.length; i++) {
-                            const trimmed = lines[i].trim(); if (!trimmed) continue;
-                            const match = trimmed.match(CHAPTER_REGEX);
-                            if (match) {
-                                currentChapterIdx++; const gIdx = paragraphs.length;
-                                chMap.push({ chapterIdx: currentChapterIdx, globalIdx: gIdx, title: match[1].trim() });
-                                paragraphs.push({ type: 'h2', text: match[1].trim(), chapterIdx: currentChapterIdx, globalIdx: gIdx });
+                            const trimmed = lines[i].trim();
+                            if (!trimmed) continue;
+
+                            let isChapter = false;
+                            let chapterTitle = '';
+
+                            const result = matchChapter(trimmed);
+                            if (result) {
+                                let score = result.weight;
+                                const prevLine = (i > 0) ? lines[i - 1].trim() : '';
+                                const nextLine = (i < lines.length - 1) ? lines[i + 1].trim() : '';
+
+                                if (!prevLine) score += 15;
+                                else score -= 15;
+
+                                if (!nextLine) score += 15;
+
+                                if (nextLine && matchChapter(nextLine)) score -= 40;
+
+                                if (trimmed.length <= 25) score += 10;
+                                else if (trimmed.length > 45) score -= 20;
+
+                                if (score >= SCORE_THRESHOLD) {
+                                    isChapter = true;
+                                    chapterTitle = normalizeTitle(trimmed);
+                                }
+                            }
+
+                            if (isChapter) {
+                                currentChapterIdx++;
+                                const gIdx = paragraphs.length;
+                                chMap.push({ chapterIdx: currentChapterIdx, globalIdx: gIdx, title: chapterTitle });
+                                paragraphs.push({ type: 'h2', text: chapterTitle, chapterIdx: currentChapterIdx, globalIdx: gIdx });
                             } else {
-                                if (currentChapterIdx === -1) { currentChapterIdx = 0; chMap.push({ chapterIdx: 0, globalIdx: 0, title: '前言' }); paragraphs.push({ type: 'h2', text: '前言', chapterIdx: 0, globalIdx: 0 }); }
+                                if (currentChapterIdx === -1) {
+                                    currentChapterIdx = 0;
+                                    chMap.push({ chapterIdx: 0, globalIdx: 0, title: '前言' });
+                                    paragraphs.push({ type: 'h2', text: '前言', chapterIdx: 0, globalIdx: 0 });
+                                }
                                 const gIdx = paragraphs.length;
                                 paragraphs.push({ type: 'p', text: trimmed, chapterIdx: currentChapterIdx, globalIdx: gIdx });
                                 wordCount += trimmed.length;
                             }
                         }
                         self.postMessage({ success: true, paragraphs, chMap, bookName: fileName.replace(/\\.(txt|TXT)$/i, ''), wordCount });
-                    } catch (err) { self.postMessage({ success: false, error: err.message }); }
+                    } catch (err) {
+                        self.postMessage({ success: false, error: err.message });
+                    }
                 };`;
             const blob = new Blob([workerScript], { type: 'application/javascript' });
             const worker = new Worker(URL.createObjectURL(blob));
             worker.onmessage = (e) => { worker.terminate(); if(e.data.success) resolve(e.data); else reject(new Error(e.data.error)); };
             worker.onerror = (e) => { worker.terminate(); reject(e); };
-            worker.postMessage({ text, fileName, rSource: regexSource, rFlags: regexFlags });
+            worker.postMessage({ text, fileName, patterns: chapterPatterns });
         });
     }
 }
@@ -347,7 +435,7 @@ class ReaderApp {
         // No cache, fetch from network
         const [meta, text] = await Promise.all([
             fetch(`/api/books/${encodeURIComponent(bookId)}`).then(r=>r.json()),
-            fetch(`/api/books/${encodeURIComponent(bookId)}/content`).then(r=>r.text())
+            fetch(`/api/books/${encodeURIComponent(bookId)}/content`).then(r=>r.arrayBuffer()).then(buf => Utils.decodeText(buf))
         ]);
         
         this.loadingText.textContent = '正在解析...';
@@ -464,7 +552,7 @@ class ReaderApp {
         this.loadingMask.classList.remove('hidden');
         
         try {
-            const text = await file.text();
+            const text = Utils.decodeText(await file.arrayBuffer());
             this.loadingText.textContent = '正在解析章节...';
             const parsed = await Utils.parseTextAsync(text, file.name);
             
