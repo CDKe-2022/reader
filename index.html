@@ -262,8 +262,8 @@ class Utils {
             const chapterPatterns = [
                 // 1. 标准章节（最高优先级）：第一章、第一百二十章、第一卷……
                 { source: "^(?:\\s{0,4})第\\s*(?:\\d+|[０-９]+|[零〇○一二三四五六七八九十百千万两壹贰叁肆伍陆柒捌玖拾佰仟]+)\\s*(?:章|节|回|卷|部|篇|集|季)\\s*(?:[：:\\-—]\\s*|\\s+)?[^\\r\\n]{0,40}$", flags: "i", weight: 60 },
-                // 2. 特殊章节：序章、楔子、终章、番外、后记……
-                { source: "^(?:\\s{0,4})(?:序章|序言|序|序曲|序幕|楔子|引子|前言|正文|尾声|终章|终幕|大结局|后记|番外(?:篇)?|外传|卷首|卷首语|卷末|卷终|完本感言|完结感言|上架感言|作者的话|作品相关|请假条|单章|通知)(?:\\s*(?:\\d+|[零〇○一二三四五六七八九十]))?(?:\\s*[：:\\-—]?\\s*)?[^\\r\\n]{0,30}$", flags: "i", weight: 60 },
+                // 2. 特殊章节：序章、楔子、终章、番外、后记……（尾随标题需冒号/破折号分隔，避免"正文开始"误匹配）
+                { source: "^(?:\\s{0,4})(?:序章|序言|序|序曲|序幕|楔子|引子|前言|正文|尾声|终章|终幕|大结局|后记|番外(?:篇)?|外传|卷首|卷首语|卷末|卷终|完本感言|完结感言|上架感言|作者的话|作品相关|请假条|单章|通知)(?:\\s*(?:\\d+|[零〇○一二三四五六七八九十]))?(?:\\s*[：:\\-—]\\s*[^\\r\\n]{0,30})?$", flags: "i", weight: 60 },
                 // 3. 英文章节：Chapter 1、Part II、Book Three、Volume 3……
                 { source: "^(?:chapter|part|book|volume|vol\\.?)\\s+(?:\\d+|[IVXLCDM]+|[A-Za-z]+)(?:\\s*(?:[:：\\-—]|\\s)\\s*[^\\r\\n]{0,40})?$", flags: "i", weight: 60 },
                 // 4. 括号包装章节（强制成对括号）：【第一章】、《终章》……
@@ -301,7 +301,7 @@ class Utils {
                         const chMap = [];
                         let currentChapterIdx = -1;
                         let wordCount = 0;
-                        const SCORE_THRESHOLD = 75;
+                        const SCORE_THRESHOLD = 60;
 
                         for (let i = 0; i < lines.length; i++) {
                             const trimmed = lines[i].trim();
@@ -316,15 +316,20 @@ class Utils {
                                 const prevLine = (i > 0) ? lines[i - 1].trim() : '';
                                 const nextLine = (i < lines.length - 1) ? lines[i + 1].trim() : '';
 
-                                if (!prevLine) score += 15;
-                                else score -= 15;
+                                // 空行是加分项，非空行不扣分（中文网文通常无空行分隔段落）
+                                if (!prevLine) score += 10;
 
-                                if (!nextLine) score += 15;
+                                if (!nextLine) score += 10;
 
                                 if (nextLine && matchChapter(nextLine)) score -= 40;
 
                                 if (trimmed.length <= 25) score += 10;
                                 else if (trimmed.length > 45) score -= 20;
+
+                                // 以句号/省略号结尾，是正文而非标题（！？常见于标题故保留）
+                                if (/[。…。]$/.test(trimmed)) {
+                                    score = 0;
+                                }
 
                                 if (score >= SCORE_THRESHOLD) {
                                     isChapter = true;
