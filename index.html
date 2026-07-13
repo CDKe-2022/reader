@@ -1162,6 +1162,7 @@ class TTSController {
         this._genToken = 0; // 生成令牌：stop() 时递增，异步操作完成后检查是否过期
         this._prefetchMap = null;
         this._currentHighlightEl = null;
+        this._advancing = false; // 防止 timeupdate 和 ended 重复触发 playNext
         this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
         this.ttsUrl = this.settings.ttsUrl || '';
         this.ttsKey = this.settings.ttsKey || '';
@@ -1182,7 +1183,21 @@ class TTSController {
             navigator.audioSession.type = 'playback';
         }
 
-        this.audio.addEventListener('ended', () => this.playNext());
+        // timeupdate 在播放期间每 250ms 触发，比 ended 更可靠（iOS 后台不挂起）
+        // 提前 0.3 秒触发下一段，给预加载音频留缓冲窗口
+        this.audio.addEventListener('timeupdate', () => {
+            if (!this.playing || this._advancing) return;
+            if (this.audio.duration && this.audio.currentTime >= this.audio.duration - 0.3) {
+                this._advancing = true;
+                this.playNext();
+            }
+        });
+        // ended 作为兜底：如果 timeupdate 没触发（极端情况），ended 仍能接住
+        this.audio.addEventListener('ended', () => {
+            if (this._advancing) return; // 已被 timeupdate 处理
+            this._advancing = true;
+            this.playNext();
+        });
         this.audio.addEventListener('error', (e) => {
             if (!this.playing && !this.loading) return; // stop() 清空 src 会触发 error，忽略
             console.error('TTS audio error', e);
@@ -1247,6 +1262,7 @@ class TTSController {
     async playCurrent() {
         if (this.queueIdx >= this.queue.length) {
             this.playing = false;
+            this._advancing = false;
             this.updatePlayButton();
             this.clearHighlight();
             Toast.show('本段朗读完毕');
@@ -1279,6 +1295,7 @@ class TTSController {
             }
             this.playing = true;
             this.loading = false;
+            this._advancing = false; // 新段落开始播放，重置推进标记
             this.updatePlayButton();
             this.setupMediaSession(item.text);
             this.highlightParagraph(item.gidx);
@@ -1388,6 +1405,7 @@ class TTSController {
         this._genToken++; // 让所有进行中的异步操作失效
         this.playing = false;
         this.loading = false;
+        this._advancing = false;
         this.audio.pause();
         this.audio.currentTime = 0;
         if (this.audio.src.startsWith('blob:')) URL.revokeObjectURL(this.audio.src);
@@ -1452,6 +1470,7 @@ class TTSController {
         }
         this._genToken++; // 取消当前异步操作
         this.queueIdx = newIdx;
+        this._advancing = false;
         if (this.audio.src.startsWith('blob:')) URL.revokeObjectURL(this.audio.src);
         this.audio.pause();
         this.playCurrent();
