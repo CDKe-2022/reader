@@ -1193,10 +1193,10 @@ class TTSController {
         }
 
         // timeupdate 在播放期间每 250ms 触发，比 ended 更可靠（iOS 后台不挂起）
-        // 提前 1 秒触发下一段 + 预设 src 让浏览器提前解码，消除段间停顿
+        // 提前 0.9 秒触发下一段 + 预设 src 让浏览器提前解码，消除段间停顿
         this.audio.addEventListener('timeupdate', () => {
             if (!this.playing || this._advancing) return;
-            if (this.audio.duration && this.audio.currentTime >= this.audio.duration - 1) {
+            if (this.audio.duration && this.audio.currentTime >= this.audio.duration - 0.9) {
                 this._advancing = true;
                 this.playNext();
             }
