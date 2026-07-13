@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>极简阅读器 2.4</title>
+<title>极简阅读器 2.6</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F4F1EA">
 
@@ -191,7 +191,7 @@ body.ui-visible #header { transform: translateY(0); }
   <div class="setting-row"><span class="setting-label">主题</span><div class="theme-dots"><div class="theme-dot" data-t="white" title="极简白"></div><div class="theme-dot" data-t="green" title="护眼绿"></div><div class="theme-dot" data-t="default" title="暖灰纸"></div><div class="theme-dot" data-t="sepia" title="羊皮纸"></div><div class="theme-dot" data-t="dark" title="深邃夜"></div></div></div>
   <div class="setting-row"><span class="setting-label">TTS 地址</span><div class="setting-btns"><input id="tts-url-input" type="text" placeholder="https://your-tts-worker.workers.dev" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
   <div class="setting-row"><span class="setting-label">TTS 密钥</span><div class="setting-btns"><input id="tts-key-input" type="password" placeholder="留空则不验证" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
-  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 2.4</span></div>
+  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 2.6</span></div>
 </div>
 
 <!-- 2.0: Auto-scroll & TTS floating bar -->
@@ -740,15 +740,23 @@ class ReaderApp {
 
     cleanUpDOM() {
         const w = document.getElementById('content-wrapper');
+        const reader = document.getElementById('reader');
+        // 清理顶部超出窗口的节点，移除前测量总高度并补偿 scrollTop 防止视觉跳变
         let sTop = document.getElementById('sentinel-top');
         let node = sTop ? sTop.nextSibling : w.firstChild;
+        let removedHeight = 0;
         while (node && node.id !== 'sentinel-bottom') {
             if (parseInt(node.dataset.gidx) < this.windowStart) {
+                removedHeight += node.offsetHeight;
                 let next = node.nextSibling;
                 w.removeChild(node);
                 node = next;
             } else break;
         }
+        if (removedHeight > 0) {
+            reader.scrollTop -= removedHeight;
+        }
+        // 清理底部超出窗口的节点
         let sBot = document.getElementById('sentinel-bottom');
         node = sBot ? sBot.previousSibling : w.lastChild;
         while (node && node.id !== 'sentinel-top') {
@@ -1027,6 +1035,8 @@ class AutoScroll {
         this.readerEl = document.getElementById('reader');
         this.speedLevels = [0.5, 1.0, 1.5, 2.0, 3.0, 5.0];
         this.speedIdx = 1;
+        this._targetNode = null;
+        this._lastTime = 0;
         this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
         if (this.settings.scrollSpeedIdx) this.speedIdx = this.settings.scrollSpeedIdx;
         this.speed = this.speedLevels[this.speedIdx];
@@ -1042,23 +1052,82 @@ class AutoScroll {
         this.scrolling = true;
         document.getElementById('btn-scroll').classList.add('active');
         uiController.showFloatBar();
-        this.scroll();
+        this._targetNode = null;
+        this._lastTime = 0;
+        this.rafId = requestAnimationFrame((t) => this.scroll(t));
     }
 
     stop() {
         this.scrolling = false;
         document.getElementById('btn-scroll').classList.remove('active');
         if (this.rafId) cancelAnimationFrame(this.rafId);
+        this._targetNode = null;
         uiController.hideFloatBar();
     }
 
-    scroll() {
+    // 逐段动画滚动：找到下一个段落边界，以恒定速度滚向它
+    scroll(timestamp) {
         if (!this.scrolling) return;
-        this.readerEl.scrollTo(0, this.readerEl.scrollTop + this.speed * 0.8);
-        // 到底部自动停止
+
+        // 第一帧只记录时间，不滚动
+        if (!this._lastTime) {
+            this._lastTime = timestamp;
+            this.rafId = requestAnimationFrame((t) => this.scroll(t));
+            return;
+        }
+        const dt = Math.min((timestamp - this._lastTime) / 1000, 0.1); // 限制 dt 防止后台标签页回来时大跳
+        this._lastTime = timestamp;
+
+        // 像素速度：50px/s × 速度倍率
+        const step = 50 * this.speed * dt;
+
+        // 验证或寻找目标段落
+        if (!this._targetNode || !this._targetNode.parentNode) {
+            this._targetNode = this.findNextTargetNode();
+        }
+
+        if (this._targetNode) {
+            // 从目标节点当前位置计算目标 scrollTop
+            const readerRect = this.readerEl.getBoundingClientRect();
+            const nodeRect = this._targetNode.getBoundingClientRect();
+            let targetY = nodeRect.top - readerRect.top + this.readerEl.scrollTop;
+
+            // 如果目标太远（超过 1.5 倍视口高度），分段滚动
+            const maxStep = this.readerEl.clientHeight * 1.5;
+            if (targetY - this.readerEl.scrollTop > maxStep) {
+                targetY = this.readerEl.scrollTop + maxStep;
+            }
+
+            const newScrollTop = Math.min(this.readerEl.scrollTop + step, targetY);
+            this.readerEl.scrollTo(0, newScrollTop);
+
+            // 到达目标，清除目标节点，下一帧找下一个
+            if (newScrollTop >= targetY - 1) {
+                this._targetNode = null;
+            }
+        } else {
+            // 没有找到目标段落（可能在等 IntersectionObserver 加载更多）
+            this.readerEl.scrollTo(0, this.readerEl.scrollTop + step);
+        }
+
+        // 到底自动停止
         const atBottom = this.readerEl.scrollTop + this.readerEl.clientHeight >= this.readerEl.scrollHeight - 5;
         if (atBottom) { this.stop(); return; }
-        this.rafId = requestAnimationFrame(() => this.scroll());
+
+        this.rafId = requestAnimationFrame((t) => this.scroll(t));
+    }
+
+    // 找到视口顶部下方的第一个段落节点
+    findNextTargetNode() {
+        const readerTop = this.readerEl.getBoundingClientRect().top;
+        const nodes = document.querySelectorAll('#content-wrapper [data-gidx]');
+        for (const node of nodes) {
+            const rect = node.getBoundingClientRect();
+            if (rect.top > readerTop + 2) {
+                return node;
+            }
+        }
+        return null;
     }
 
     cycleSpeed() {
