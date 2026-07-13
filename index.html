@@ -920,6 +920,13 @@ class UIController {
         ttsKeyInput.value = tts.ttsKey;
         ttsUrlInput.addEventListener('change', () => { tts.ttsUrl = ttsUrlInput.value.trim(); tts.saveSettings(); });
         ttsKeyInput.addEventListener('change', () => { tts.ttsKey = ttsKeyInput.value.trim(); tts.saveSettings(); });
+
+        // 页面不可见时（切换标签页、锁屏、最小化）停止自动滚动
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && autoScroll.scrolling) {
+                autoScroll.stop();
+            }
+        });
     }
 
     applySettings() {
@@ -1177,6 +1184,7 @@ class TTSController {
 
         this.audio.addEventListener('ended', () => this.playNext());
         this.audio.addEventListener('error', (e) => {
+            if (!this.playing && !this.loading) return; // stop() 清空 src 会触发 error，忽略
             console.error('TTS audio error', e);
             this.loading = false;
             Toast.show('播放出错，跳过');
@@ -1199,19 +1207,23 @@ class TTSController {
 
     togglePlay() {
         if (this.playing) { this.pause(); }
+        else if (this.loading) return;
         else if (this.audio.paused && this.audio.src) { this.resume(); }
         else { this.startReading(); }
     }
 
     startReading() {
+        if (this.loading) return;
         if (!this.isConfigured()) {
             Toast.show('请先在设置中配置 TTS 地址');
             uiController.toggleDrawer('drawer-settings');
             return;
         }
+        this.loading = true;
+        this.updatePlayButton();
         // 获取当前章节文本
         this.queue = this.collectChapterText();
-        if (this.queue.length === 0) { Toast.show('当前无可朗读内容'); return; }
+        if (this.queue.length === 0) { this.loading = false; this.updatePlayButton(); Toast.show('当前无可朗读内容'); return; }
         this.queueIdx = 0;
         uiController.showFloatBar();
         this.playCurrent();
@@ -1285,6 +1297,7 @@ class TTSController {
 
     // 预加载下一段音频，消除段落间停顿
     async prefetchNext() {
+        const myToken = this._genToken;
         const nextIdx = this.queueIdx + 1;
         if (nextIdx >= this.queue.length) return;
         if (this._prefetchMap && this._prefetchMap.has(nextIdx)) return; // 已预加载
@@ -1293,6 +1306,10 @@ class TTSController {
         const nextItem = this.queue[nextIdx];
         try {
             const url = await this.fetchTTS(nextItem.text);
+            if (myToken !== this._genToken) {
+                URL.revokeObjectURL(url);
+                return;
+            }
             this._prefetchMap.set(nextIdx, url);
         } catch (e) {
             // 预加载失败无所谓，到时候正常请求
@@ -1325,6 +1342,8 @@ class TTSController {
         // 释放上一段的 blob URL
         if (this.audio.src.startsWith('blob:')) URL.revokeObjectURL(this.audio.src);
         this.queueIdx++;
+        // 主动触发虚拟滚动加载，确保 collectMoreText 能取到段落
+        if (app.loadMore) app.loadMore('bottom');
         // 如果快到队列末尾，补充后续内容
         if (this.queueIdx >= this.queue.length - 5) {
             const lastGidx = this.queue.length > 0 ? this.queue[this.queue.length - 1].gidx : app.currentGlobalIdx;
@@ -1355,9 +1374,13 @@ class TTSController {
         this.updatePlayButton();
     }
 
-    resume() {
+    async resume() {
         this.playing = true;
-        this.audio.play();
+        try {
+            await this.audio.play();
+        } catch (e) {
+            this.playing = false;
+        }
         this.updatePlayButton();
     }
 
