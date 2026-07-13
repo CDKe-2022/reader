@@ -197,7 +197,8 @@ body.ui-visible #header { transform: translateY(0); }
 <!-- 2.0: Auto-scroll & TTS floating bar -->
 <div id="float-bar">
   <button class="fb-btn" id="btn-scroll" title="自动滚动">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+    <svg class="scroll-icon-down" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+    <svg class="scroll-icon-stop" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
   </button>
   <span class="fb-speed" id="scroll-speed-label">1.0x</span>
   <div class="fb-divider"></div>
@@ -384,8 +385,8 @@ class Utils {
                                 if (trimmed.length <= 25) score += 10;
                                 else if (trimmed.length > 45) score -= 20;
 
-                                // 以句号/省略号结尾，是正文而非标题（！？常见于标题故保留）
-                                if (/[。…。]$/.test(trimmed)) {
+                                // 仅以句号结尾判为正文（省略号/问号/感叹号常见于标题故保留）
+                                if (/。$/.test(trimmed)) {
                                     score = 0;
                                 }
 
@@ -1058,6 +1059,8 @@ class AutoScroll {
     start() {
         this.scrolling = true;
         document.getElementById('btn-scroll').classList.add('active');
+        document.querySelector('.scroll-icon-down').style.display = 'none';
+        document.querySelector('.scroll-icon-stop').style.display = '';
         uiController.showFloatBar();
         this._targetNode = null;
         this._lastTime = 0;
@@ -1067,6 +1070,8 @@ class AutoScroll {
     stop() {
         this.scrolling = false;
         document.getElementById('btn-scroll').classList.remove('active');
+        document.querySelector('.scroll-icon-down').style.display = '';
+        document.querySelector('.scroll-icon-stop').style.display = 'none';
         if (this.rafId) cancelAnimationFrame(this.rafId);
         this._targetNode = null;
         uiController.hideFloatBar();
@@ -1153,6 +1158,7 @@ class AutoScroll {
 class TTSController {
     constructor() {
         this.audio = new Audio();
+        this.audio.preload = 'auto';
         this.playing = false;
         this.loading = false;
         this.queue = [];
@@ -1184,10 +1190,10 @@ class TTSController {
         }
 
         // timeupdate 在播放期间每 250ms 触发，比 ended 更可靠（iOS 后台不挂起）
-        // 提前 0.3 秒触发下一段，给预加载音频留缓冲窗口
+        // 提前 0.5 秒触发下一段 + 预设 src 让浏览器提前解码，消除段间停顿
         this.audio.addEventListener('timeupdate', () => {
             if (!this.playing || this._advancing) return;
-            if (this.audio.duration && this.audio.currentTime >= this.audio.duration - 0.3) {
+            if (this.audio.duration && this.audio.currentTime >= this.audio.duration - 0.5) {
                 this._advancing = true;
                 this.playNext();
             }
@@ -1221,9 +1227,7 @@ class TTSController {
     }
 
     togglePlay() {
-        if (this.playing) { this.pause(); }
-        else if (this.loading) return;
-        else if (this.audio.paused && this.audio.src) { this.resume(); }
+        if (this.playing || this.loading) { this.stop(); }
         else { this.startReading(); }
     }
 
@@ -1385,22 +1389,6 @@ class TTSController {
         return items.slice(0, 30);
     }
 
-    pause() {
-        this.playing = false;
-        this.audio.pause();
-        this.updatePlayButton();
-    }
-
-    async resume() {
-        this.playing = true;
-        try {
-            await this.audio.play();
-        } catch (e) {
-            this.playing = false;
-        }
-        this.updatePlayButton();
-    }
-
     stop() {
         this._genToken++; // 让所有进行中的异步操作失效
         this.playing = false;
@@ -1427,8 +1415,10 @@ class TTSController {
         if (this.loading) {
             btn.innerHTML = '<div style="width:18px;height:18px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;"></div>';
         } else if (this.playing) {
-            btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
+            // 停止图标（方形），表示再次点击将彻底停止
+            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>';
         } else {
+            // 播放图标（三角形）
             btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
         }
     }
@@ -1484,8 +1474,8 @@ class TTSController {
             artist: ch ? ch.title : '朗读中',
             album: app.currentBookName || '听书'
         });
-        navigator.mediaSession.setActionHandler('play', () => this.resume());
-        navigator.mediaSession.setActionHandler('pause', () => this.pause());
+        navigator.mediaSession.setActionHandler('play', () => { if (!this.playing && !this.loading) this.startReading(); });
+        navigator.mediaSession.setActionHandler('pause', () => this.stop());
         navigator.mediaSession.setActionHandler('previoustrack', () => this.jumpToParagraph(-1));
         navigator.mediaSession.setActionHandler('nexttrack', () => this.jumpToParagraph(1));
     }
@@ -1508,7 +1498,7 @@ class TTSController {
 
     adjustSpeed(delta) {
         const newSpeed = Math.round((this.speed + delta) * 10) / 10;
-        if (newSpeed >= 0.5 && newSpeed <= 2.0) {
+        if (newSpeed >= 1.0 && newSpeed <= 1.5) {
             this.speed = newSpeed;
             document.getElementById('tts-speed-val').textContent = newSpeed.toFixed(1) + 'x';
             this.saveSettings();
