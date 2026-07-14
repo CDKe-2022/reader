@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#F4F1EA">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><text y='.9em' font-size='160'>📖</text></svg>">
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/CDKe-2022/reader/refs/heads/main/icon-192.png">
+<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/CDKe-2022/reader/refs/heads/main/icon-512.png">
 
 <script>
   (function() {
@@ -1193,10 +1193,10 @@ class TTSController {
         }
 
         // timeupdate 在播放期间每 250ms 触发，比 ended 更可靠（iOS 后台不挂起）
-        // 提前 0.9 秒触发下一段 + 预设 src 让浏览器提前解码，消除段间停顿
+        // 提前 0.5 秒触发下一段 + 预设 src 让浏览器提前解码，消除段间停顿
         this.audio.addEventListener('timeupdate', () => {
             if (!this.playing || this._advancing) return;
-            if (this.audio.duration && this.audio.currentTime >= this.audio.duration - 0.9) {
+            if (this.audio.duration && this.audio.currentTime >= this.audio.duration - 0.5) {
                 this._advancing = true;
                 this.playNext();
             }
