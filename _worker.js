@@ -1,11 +1,27 @@
-// _worker.js 2.0
+// _worker.js 2.6
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
-    // 1. 静态文件托管
+    // 1. 静态文件托管（2.0: 添加 no-cache 头避免 CDN 缓存旧版）
     if (!url.pathname.startsWith('/api/')) {
-      return env.ASSETS.fetch(request);
+      // favicon.ico 重定向到 GitHub 上的图标
+      if (url.pathname === '/favicon.ico') {
+        return Response.redirect('https://raw.githubusercontent.com/CDKe-2022/reader/refs/heads/main/icon-192.png', 301);
+      }
+      const assetResponse = await env.ASSETS.fetch(request);
+      const newHeaders = new Headers(assetResponse.headers);
+      // HTML 文件不缓存，确保用户始终拿到最新版
+      if (url.pathname === '/' || url.pathname.endsWith('.html')) {
+        newHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      } else if (url.pathname.endsWith('.css') || url.pathname.endsWith('.js')) {
+        newHeaders.set('Cache-Control', 'public, max-age=86400');
+      }
+      return new Response(assetResponse.body, {
+        status: assetResponse.status,
+        statusText: assetResponse.statusText,
+        headers: newHeaders
+      });
     }
     
     const path = url.pathname;
