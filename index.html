@@ -1219,7 +1219,7 @@ class TTSController {
         // 提前 0.5 秒触发下一段 + 预设 src 让浏览器提前解码，消除段间停顿
         this.audio.addEventListener('timeupdate', () => {
             if (!this.playing || this._advancing) return;
-            if (this.audio.duration && this.audio.currentTime >= this.audio.duration - 0.5) {
+            if (this.audio.duration && this.audio.currentTime >= this.audio.duration - 3) {
                 this._advancing = true;
                 this.playNext();
             }
