@@ -1403,7 +1403,8 @@ class TTSController {
             _target: targetUrl,
             _model: 's2.1-pro-free',
             text: text.slice(0, 2000),
-            format: 'mp3'
+            format: 'mp3',
+            speed: this.speed
         };
         if (this.ttsKey) proxyBody._auth = 'Bearer ' + this.ttsKey;
         if (this.fishRefId) proxyBody.reference_id = this.fishRefId;
