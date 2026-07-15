@@ -1,4 +1,4 @@
-// _worker.js 2.6
+// _worker.js 3.0
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
