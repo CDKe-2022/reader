@@ -1560,7 +1560,7 @@ class TTSController {
 
     adjustSpeed(delta) {
         const newSpeed = Math.round((this.speed + delta) * 10) / 10;
-        if (newSpeed >= 1.0 && newSpeed <= 1.5) {
+        if (newSpeed >= 0.5 && newSpeed <= 1.5) {
             this.speed = newSpeed;
             document.getElementById('tts-speed-val').textContent = newSpeed.toFixed(1) + 'x';
             this.saveSettings();
