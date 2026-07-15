@@ -812,12 +812,22 @@ class UIController {
         this.readerEl = document.getElementById('reader');
         this.contentWrapper = document.getElementById('content-wrapper');
         this.saveTimer = null;
-        this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{"fontSize":18,"lineHeight":1.9,"theme":"default","previousTheme":"default"}');
+        this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
+        // 3.0: 补全缺失字段（修复旧版 cycleSpeed bug 导致的 localStorage 数据丢失）
+        const defaults = { fontSize: 18, lineHeight: 1.9, theme: 'default', previousTheme: 'default' };
+        let needsRepair = false;
+        for (const [k, v] of Object.entries(defaults)) {
+            if (this.settings[k] === undefined || this.settings[k] === null) {
+                this.settings[k] = v;
+                needsRepair = true;
+            }
+        }
         // 2.0 数据迁移：修复旧版 previousTheme='dark' 脏数据
         if (this.settings.previousTheme === 'dark' || this.settings.previousTheme === this.settings.theme) {
             this.settings.previousTheme = 'default';
-            this.saveSettings();
+            needsRepair = true;
         }
+        if (needsRepair) this.saveSettings();
     }
 
     init() {
