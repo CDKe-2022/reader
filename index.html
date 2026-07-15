@@ -1396,21 +1396,21 @@ class TTSController {
     }
 
     // [Fish Audio 兼容] 临时适配，后续删除
-    // Fish Audio API: POST /v1/tts, model 在 header 里, text/reference_id 在 body 里
+    // Fish Audio API: 通过 /api/tts-proxy 代理转发，解决浏览器 CORS 限制
     async fetchFishAudio(text) {
-        const url = this.ttsUrl.replace(/\/$/, '') + '/v1/tts';
-        const headers = { 'Content-Type': 'application/json' };
-        if (this.ttsKey) headers['Authorization'] = 'Bearer ' + this.ttsKey;
-        headers['model'] = 's2.1-pro-free';
-        const body = {
+        const targetUrl = this.ttsUrl.replace(/\/$/, '') + '/v1/tts';
+        const proxyBody = {
+            _target: targetUrl,
+            _model: 's2.1-pro-free',
             text: text.slice(0, 2000),
             format: 'mp3'
         };
-        if (this.fishRefId) body.reference_id = this.fishRefId;
-        const res = await fetch(url, {
+        if (this.ttsKey) proxyBody._auth = 'Bearer ' + this.ttsKey;
+        if (this.fishRefId) proxyBody.reference_id = this.fishRefId;
+        const res = await fetch('/api/tts-proxy', {
             method: 'POST',
-            headers,
-            body: JSON.stringify(body)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(proxyBody)
         });
         if (!res.ok) {
             const err = await res.text();
