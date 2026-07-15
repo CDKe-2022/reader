@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>极简阅读器 2.6</title>
+<title>极简阅读器 3.0</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#F4F1EA">
@@ -194,7 +194,7 @@ body.ui-visible #header { transform: translateY(0); }
   <div class="setting-row"><span class="setting-label">主题</span><div class="theme-dots"><div class="theme-dot" data-t="white" title="极简白"></div><div class="theme-dot" data-t="green" title="护眼绿"></div><div class="theme-dot" data-t="default" title="暖灰纸"></div><div class="theme-dot" data-t="sepia" title="羊皮纸"></div><div class="theme-dot" data-t="dark" title="深邃夜"></div></div></div>
   <div class="setting-row"><span class="setting-label">TTS 地址</span><div class="setting-btns"><input id="tts-url-input" type="text" placeholder="https://your-tts-worker.workers.dev" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
   <div class="setting-row"><span class="setting-label">TTS 密钥</span><div class="setting-btns"><input id="tts-key-input" type="password" placeholder="留空则不验证" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;"></div></div>
-  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 2.6</span></div>
+  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 3.0</span></div>
 </div>
 
 <!-- 2.0: Auto-scroll & TTS floating bar -->
@@ -1149,8 +1149,10 @@ class AutoScroll {
         this.speedIdx = (this.speedIdx + 1) % this.speedLevels.length;
         this.speed = this.speedLevels[this.speedIdx];
         this.updateLabel();
-        this.settings.scrollSpeedIdx = this.speedIdx;
-        localStorage.setItem('reader_settings_v2', JSON.stringify(this.settings));
+        // 读取最新设置再合并，避免覆盖 UIController 保存的 fontSize 等字段
+        const s = JSON.parse(localStorage.getItem('reader_settings_v2') || '{}');
+        s.scrollSpeedIdx = this.speedIdx;
+        localStorage.setItem('reader_settings_v2', JSON.stringify(s));
     }
 
     updateLabel() {
@@ -1382,7 +1384,6 @@ class TTSController {
     collectMoreText(afterGidx) {
         const items = [];
         const nodes = document.querySelectorAll('#content-wrapper [data-gidx]');
-        let foundAfter = false;
         for (const node of nodes) {
             const gidx = parseInt(node.dataset.gidx);
             if (gidx <= afterGidx) continue;
