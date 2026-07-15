@@ -191,6 +191,7 @@ export default {
         if (body.text) proxyBody.text = body.text;
         if (body.format) proxyBody.format = body.format;
         if (body.reference_id) proxyBody.reference_id = body.reference_id;
+        if (body.speed) proxyBody.speed = body.speed;
 
         const upstreamRes = await fetch(targetUrl, {
           method: 'POST',
