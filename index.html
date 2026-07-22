@@ -9,7 +9,6 @@
 <meta name="theme-color" content="#F4F1EA">
 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/CDKe-2022/reader/refs/heads/main/icon-192.png">
 <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/CDKe-2022/reader/refs/heads/main/icon-512.png">
-<script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
 
 <script>
   (function() {
@@ -616,12 +615,16 @@ class ReaderApp {
             this.currentChapterIdx = this.getChapterByGlobalIdx(this.currentGlobalIdx).chapterIdx;
             
             uiController.applySettings();
-            // 打开书时初始化繁简转换器（如果已开启）
+            // 打开书时：如果繁简转换已开启但库还没加载，先加载库再渲染
             if (uiController.settings.t2s && !uiController.t2sConverter) {
-                uiController.t2sConverter = OpenCC.Converter({ from: 't', to: 's' });
+                uiController.loadT2SLibrary().then(() => {
+                    this.teleportTo(this.currentGlobalIdx);
+                    this.updateHeader(this.currentChapterIdx);
+                });
+            } else {
+                this.teleportTo(this.currentGlobalIdx);
+                this.updateHeader(this.currentChapterIdx);
             }
-            this.teleportTo(this.currentGlobalIdx);
-            this.updateHeader(this.currentChapterIdx);
             
         } catch (e) { 
             console.error(e);
@@ -1096,17 +1099,53 @@ class UIController {
     }
 
     toggleT2S() {
-        this.settings.t2s = !this.settings.t2s;
-        this.saveSettings();
-        this.updateT2SButton();
         if (this.settings.t2s) {
-            // 初始化转换器并重新渲染
-            this.t2sConverter = OpenCC.Converter({ from: 't', to: 's' });
-        } else {
+            // 当前已开启，点击则关闭
+            this.settings.t2s = false;
             this.t2sConverter = null;
+            this.saveSettings();
+            this.updateT2SButton();
+            if (app.bookId) app.teleportTo(app.currentGlobalIdx);
+            return;
         }
-        // 重新渲染当前页面
-        if (app.bookId) app.teleportTo(app.currentGlobalIdx);
+        // 当前未开启，点击则开启：懒加载 opencc-js 库
+        const btn = document.getElementById('btn-t2s');
+        btn.textContent = '加载中...';
+        btn.disabled = true;
+        this.loadT2SLibrary().then(success => {
+            btn.disabled = false;
+            if (success) {
+                this.settings.t2s = true;
+                this.saveSettings();
+                this.updateT2SButton();
+                if (app.bookId) app.teleportTo(app.currentGlobalIdx);
+            } else {
+                this.updateT2SButton();
+            }
+        });
+    }
+
+    // 懒加载 opencc-js 库，返回 Promise<boolean>
+    loadT2SLibrary() {
+        if (this.t2sConverter) return Promise.resolve(true);
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/t2cn.js';
+            script.onload = () => {
+                try {
+                    this.t2sConverter = OpenCC.Converter({ from: 't', to: 's' });
+                    resolve(true);
+                } catch (e) {
+                    Toast.show('繁简转换初始化失败');
+                    resolve(false);
+                }
+            };
+            script.onerror = () => {
+                Toast.show('繁简转换库加载失败');
+                resolve(false);
+            };
+            document.head.appendChild(script);
+        });
     }
 
     // 2.0: 浮动栏显示 + 自动隐藏逻辑
