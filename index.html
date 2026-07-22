@@ -1133,7 +1133,7 @@ class UIController {
             script.src = 'https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/t2cn.js';
             script.onload = () => {
                 try {
-                    this.t2sConverter = OpenCC.Converter({ from: 't', to: 's' });
+                    this.t2sConverter = OpenCC.Converter({ from: 't', to: 'cn' });
                     resolve(true);
                 } catch (e) {
                     Toast.show('繁简转换初始化失败');
