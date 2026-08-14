@@ -1401,20 +1401,21 @@ class TTSController {
             navigator.audioSession.type = 'playback';
         }
 
-        // timeupdate 在播放期间每 250ms 触发，比 ended 更可靠（iOS 后台不挂起）
-        // 提前 2.0 秒触发下一段 + 预设 src 让浏览器提前解码，消除段间停顿
+        // [修复] 不再提前 2 秒切换段落——那会把每段末尾约 2 秒（≈8~12 个字）的语音掐掉。
+        // ended 为主触发：完整播完当前段再进下一段（下一句已预取为本地 blob，衔接耗时极短，几乎无感）。
+        this.audio.addEventListener('ended', () => {
+            if (this._advancing) return;
+            this._advancing = true;
+            this.playNext();
+        });
+        // timeupdate 仅作兜底：只在音频真实播到末尾（剩余 <= 0.05s）时推进，
+        // 防止个别环境下 ended 丢失导致卡住；0.05s 的余量人耳不可闻，不会截断内容。
         this.audio.addEventListener('timeupdate', () => {
             if (!this.playing || this._advancing) return;
-            if (this.audio.duration && this.audio.currentTime >= this.audio.duration - 2.0) {
+            if (this.audio.duration && this.audio.currentTime >= this.audio.duration - 0.05) {
                 this._advancing = true;
                 this.playNext();
             }
-        });
-        // ended 作为兜底：如果 timeupdate 没触发（极端情况），ended 仍能接住
-        this.audio.addEventListener('ended', () => {
-            if (this._advancing) return; // 已被 timeupdate 处理
-            this._advancing = true;
-            this.playNext();
         });
         this.audio.addEventListener('error', (e) => {
             if (!this.playing && !this.loading) return; // stop() 清空 src 会触发 error，忽略
