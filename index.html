@@ -41,7 +41,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .page::-webkit-scrollbar-track, #drawer-toc .list::-webkit-scrollbar-track { background: transparent; }
 .page::-webkit-scrollbar-thumb, #drawer-toc .list::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; transition: background .2s; }
 .page::-webkit-scrollbar-thumb:hover, #drawer-toc .list::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
-.page { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; transition: opacity .3s, visibility .3s; }
+.page { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; transition: opacity .3s, visibility .3s; }
 .page.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
 
 #header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: var(--header-h); display: flex; align-items: center; justify-content: center; background: var(--header-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-bottom: 1px solid var(--border); transform: translateY(-100%); transition: transform .35s cubic-bezier(.4,0,.2,1); }
@@ -52,7 +52,7 @@ body.ui-visible #header { transform: translateY(0); }
 .icon-btn:hover { background: var(--border); }
 .header-actions { display: flex; gap: 4px; }
 
-#content-wrapper { max-width: var(--content-max-w); margin: 0 auto; padding: calc(var(--header-h) + 40px) 24px 100px; font-size: 18px; line-height: 1.9; min-height: 100%; letter-spacing: 0.5px; }
+#content-wrapper { max-width: var(--content-max-w); margin: 0 auto; padding: calc(var(--header-h) + 40px) 24px 100px; font-size: 18px; line-height: 1.9; min-height: 100%; letter-spacing: 0.5px; overflow-wrap: break-word; word-break: break-word; }
 #content-wrapper p { text-indent: 2em; margin-bottom: 1.2em; text-align: justify; }
 #content-wrapper .chapter-title { font-size: 22px; font-weight: 600; text-align: center; margin: 2.5em 0 0.8em; padding-bottom: 12px; color: var(--accent); scroll-margin-top: calc(var(--header-h) + 30px); position: relative; }
 #content-wrapper .chapter-title::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 240px; height: 2px; background: radial-gradient(ellipse at center, var(--accent) 0%, transparent 60%); opacity: 0.5; }
