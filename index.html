@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>极简阅读器 3.0</title>
+<title>极简阅读器 3.1</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#F4F1EA">
@@ -234,7 +234,35 @@ body.ui-visible #header { transform: translateY(0); }
 </div>
 
 <script>
-// --- 2.0: Class-based Architecture ---
+// --- 3.0: Class-based Architecture ---
+
+// --- 3.0: SettingsManager (Single Source of Truth) ---
+// 所有模块通过此单例读写设置，杜绝 localStorage 互相覆盖
+const settings = new (class SettingsManager {
+    constructor() {
+        this._data = this._load();
+        this._defaults = { fontSize: 18, lineHeight: 1.9, theme: 'default', previousTheme: 'default', t2s: false };
+        this._repair();
+    }
+    _load() {
+        try { return JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}'); }
+        catch (e) { return {}; }
+    }
+    _save() { try { localStorage.setItem('reader_settings_v2', JSON.stringify(this._data)); } catch(e) {} }
+    _repair() {
+        let needs = false;
+        for (const [k, v] of Object.entries(this._defaults)) {
+            if (this._data[k] === undefined || this._data[k] === null) { this._data[k] = v; needs = true; }
+        }
+        if (this._data.previousTheme === 'dark' || this._data.previousTheme === this._data.theme) {
+            this._data.previousTheme = 'default'; needs = true;
+        }
+        if (needs) this._save();
+    }
+    get(key) { return this._data[key]; }
+    set(key, value) { this._data[key] = value; this._save(); }
+    setMultiple(obj) { Object.assign(this._data, obj); this._save(); }
+})();
 
 class StorageManager {
     constructor() {
@@ -433,9 +461,10 @@ class Utils {
                     }
                 };`;
             const blob = new Blob([workerScript], { type: 'application/javascript' });
-            const worker = new Worker(URL.createObjectURL(blob));
-            worker.onmessage = (e) => { worker.terminate(); if(e.data.success) resolve(e.data); else reject(new Error(e.data.error)); };
-            worker.onerror = (e) => { worker.terminate(); reject(e); };
+            const blobUrl = URL.createObjectURL(blob);
+            const worker = new Worker(blobUrl);
+            worker.onmessage = (e) => { worker.terminate(); URL.revokeObjectURL(blobUrl); if(e.data.success) resolve(e.data); else reject(new Error(e.data.error)); };
+            worker.onerror = (e) => { worker.terminate(); URL.revokeObjectURL(blobUrl); reject(e); };
             worker.postMessage({ text, fileName, patterns: chapterPatterns });
         });
     }
@@ -480,7 +509,25 @@ class ReaderApp {
 
     async init() {
         await this.storage.init();
+        this.setupBookListDelegation();
         await this.renderBookList();
+    }
+
+    // 3.0: 事件委托替代内联 onclick，避免 XSS 风险
+    setupBookListDelegation() {
+        const list = document.getElementById('book-list');
+        list.addEventListener('click', (e) => {
+            const actionEl = e.target.closest('[data-action]');
+            if (!actionEl) return;
+            const bookItem = actionEl.closest('.book-item');
+            if (!bookItem) return;
+            const id = bookItem.dataset.id;
+            const action = actionEl.dataset.action;
+            if (action === 'pin') this.pinBook(id);
+            else if (action === 'open') this.openBook(id);
+            else if (action === 'refresh') this.refreshBook(id);
+            else if (action === 'delete') this.deleteBook(id);
+        });
     }
 
     getChapterByGlobalIdx(gIdx) {
@@ -502,7 +549,10 @@ class ReaderApp {
             
             let networkMeta = null;
             try { networkMeta = await fetch(`/api/books/${encodeURIComponent(bookId)}`).then(r=>r.json()); } 
-            catch (e) { return { name: cached.name, progress_gidx: cached.lastProgressGidx || 0 }; }
+            catch (e) { 
+                console.warn('Network fetch failed, using cached data', e);
+                return { name: cached.name, progress_gidx: cached.lastProgressGidx || 0 }; 
+            }
             
             const finalProgressGidx = isRecentCache ? (cached.lastProgressGidx || 0) : (networkMeta.progress_gidx || 0);
             return {
@@ -553,8 +603,8 @@ class ReaderApp {
 
                 return `
                 <div class="book-item" data-id="${Utils.escapeHtml(b.id)}">
-                    <button class="btn-spine" onclick="app.pinBook('${Utils.escapeHtml(b.id)}')" title="置顶"></button>
-                    <div class="book-main" onclick="app.openBook('${Utils.escapeHtml(b.id)}')">
+                    <button class="btn-spine" data-action="pin" title="置顶"></button>
+                    <div class="book-main" data-action="open">
                         <div class="book-name">${Utils.escapeHtml(b.name)}</div>
                         <div class="progress-info">
                             <span class="progress-text">${Utils.escapeHtml(currentTitle)} (${progressPercent}%)</span>
@@ -562,10 +612,10 @@ class ReaderApp {
                         </div>
                     </div>
                     <div class="book-actions">
-                        <button class="btn-icon-action" onclick="app.refreshBook('${Utils.escapeHtml(b.id)}')" title="刷新">
+                        <button class="btn-icon-action" data-action="refresh" title="刷新">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                         </button>
-                        <button class="btn-icon-action btn-delete" onclick="app.deleteBook('${Utils.escapeHtml(b.id)}')" title="删除">
+                        <button class="btn-icon-action btn-delete" data-action="delete" title="删除">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
                     </div>
@@ -616,7 +666,7 @@ class ReaderApp {
             
             uiController.applySettings();
             // 打开书时：如果繁简转换已开启但库还没加载，先加载库再渲染
-            if (uiController.settings.t2s && !uiController.t2sConverter) {
+            if (settings.get('t2s') && !uiController.t2sConverter) {
                 uiController.loadT2SLibrary().then(() => {
                     this.teleportTo(this.currentGlobalIdx);
                     this.updateHeader(this.currentChapterIdx);
@@ -836,22 +886,6 @@ class UIController {
         this.readerEl = document.getElementById('reader');
         this.contentWrapper = document.getElementById('content-wrapper');
         this.saveTimer = null;
-        this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
-        // 3.0: 补全缺失字段（修复旧版 cycleSpeed bug 导致的 localStorage 数据丢失）
-        const defaults = { fontSize: 18, lineHeight: 1.9, theme: 'default', previousTheme: 'default', t2s: false };
-        let needsRepair = false;
-        for (const [k, v] of Object.entries(defaults)) {
-            if (this.settings[k] === undefined || this.settings[k] === null) {
-                this.settings[k] = v;
-                needsRepair = true;
-            }
-        }
-        // 2.0 数据迁移：修复旧版 previousTheme='dark' 脏数据
-        if (this.settings.previousTheme === 'dark' || this.settings.previousTheme === this.settings.theme) {
-            this.settings.previousTheme = 'default';
-            needsRepair = true;
-        }
-        if (needsRepair) this.saveSettings();
     }
 
     init() {
@@ -887,11 +921,13 @@ class UIController {
             clearTimeout(scrollTimer);
             scrollTimer = setTimeout(() => {
                 if (!app.bookId) return;
-                const scrollTop = this.readerEl.scrollTop; 
+                const scrollTop = this.readerEl.scrollTop;
+                const readerTop = this.readerEl.getBoundingClientRect().top;
                 const domNodes = this.contentWrapper.children; 
                 let topGidx = app.windowStart;
                 for (let i = 0; i < domNodes.length; i++) { 
-                    if (domNodes[i].offsetTop <= scrollTop + 100) topGidx = parseInt(domNodes[i].dataset.gidx); 
+                    // 使用 getBoundingClientRect 替代 offsetTop，语义更准确，不依赖 offsetParent 链
+                    if (domNodes[i].getBoundingClientRect().top - readerTop <= 100) topGidx = parseInt(domNodes[i].dataset.gidx); 
                     else break; 
                 }
                 const currentChapter = app.getChapterByGlobalIdx(topGidx);
@@ -977,15 +1013,13 @@ class UIController {
         document.getElementById('font-inc').onclick = () => this.adjustFont(1);
         document.querySelectorAll('[data-line]').forEach(btn => { 
             btn.onclick = () => { 
-                this.settings.lineHeight = parseFloat(btn.dataset.line); 
-                this.saveSettings(); 
+                settings.set('lineHeight', parseFloat(btn.dataset.line)); 
                 this.applySettings(); 
             }; 
         });
         document.querySelectorAll('.theme-dot').forEach(dot => { 
             dot.onclick = () => { 
-                this.settings.theme = dot.dataset.t; 
-                this.saveSettings(); 
+                settings.set('theme', dot.dataset.t); 
                 this.applySettings(); 
             }; 
         });
@@ -1028,21 +1062,17 @@ class UIController {
     }
 
     applySettings() {
-        document.body.dataset.theme = this.settings.theme;
-        this.contentWrapper.style.fontSize = this.settings.fontSize + 'px'; 
-        this.contentWrapper.style.lineHeight = this.settings.lineHeight;
-        document.getElementById('font-val').textContent = this.settings.fontSize;
-        document.querySelectorAll('.theme-dot').forEach(el => el.classList.toggle('active', el.dataset.t === this.settings.theme));
-        document.querySelectorAll('[data-line]').forEach(el => el.classList.toggle('active', parseFloat(el.dataset.line) === this.settings.lineHeight));
+        document.body.dataset.theme = settings.get('theme');
+        this.contentWrapper.style.fontSize = settings.get('fontSize') + 'px'; 
+        this.contentWrapper.style.lineHeight = settings.get('lineHeight');
+        document.getElementById('font-val').textContent = settings.get('fontSize');
+        document.querySelectorAll('.theme-dot').forEach(el => el.classList.toggle('active', el.dataset.t === settings.get('theme')));
+        document.querySelectorAll('[data-line]').forEach(el => el.classList.toggle('active', parseFloat(el.dataset.line) === settings.get('lineHeight')));
         
         const btn = document.getElementById('btn-night-mode');
-        btn.innerHTML = this.settings.theme === 'dark' 
+        btn.innerHTML = settings.get('theme') === 'dark' 
             ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
             : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
-    }
-
-    saveSettings() {
-        localStorage.setItem('reader_settings_v2', JSON.stringify(this.settings));
     }
 
     // 更新进度条位置：滑块 top 随进度移动，不滚动时自动隐藏
@@ -1064,30 +1094,28 @@ class UIController {
     }
 
     adjustFont(delta) {
-        const newSize = this.settings.fontSize + delta;
+        const newSize = settings.get('fontSize') + delta;
         if(newSize >= 14 && newSize <= 28) {
-            this.settings.fontSize = newSize;
-            this.saveSettings();
+            settings.set('fontSize', newSize);
             this.applySettings();
         }
     }
 
     toggleTheme() {
-        const isDark = this.settings.theme === 'dark';
+        const isDark = settings.get('theme') === 'dark';
         if (isDark) {
-            this.settings.theme = this.settings.previousTheme || 'default';
+            settings.set('theme', settings.get('previousTheme') || 'default');
         } else {
-            this.settings.previousTheme = this.settings.theme;
-            this.settings.theme = 'dark';
+            settings.set('previousTheme', settings.get('theme'));
+            settings.set('theme', 'dark');
         }
-        this.saveSettings();
         this.applySettings();
     }
 
     // 繁体转简体
     updateT2SButton() {
         const btn = document.getElementById('btn-t2s');
-        if (this.settings.t2s) {
+        if (settings.get('t2s')) {
             btn.textContent = '简体（已开启）';
             btn.style.background = 'var(--accent)';
             btn.style.color = '#fff';
@@ -1099,11 +1127,10 @@ class UIController {
     }
 
     toggleT2S() {
-        if (this.settings.t2s) {
+        if (settings.get('t2s')) {
             // 当前已开启，点击则关闭
-            this.settings.t2s = false;
+            settings.set('t2s', false);
             this.t2sConverter = null;
-            this.saveSettings();
             this.updateT2SButton();
             if (app.bookId) app.teleportTo(app.currentGlobalIdx);
             return;
@@ -1115,8 +1142,7 @@ class UIController {
         this.loadT2SLibrary().then(success => {
             btn.disabled = false;
             if (success) {
-                this.settings.t2s = true;
-                this.saveSettings();
+                settings.set('t2s', true);
                 this.updateT2SButton();
                 if (app.bookId) app.teleportTo(app.currentGlobalIdx);
             } else {
@@ -1221,11 +1247,9 @@ class AutoScroll {
         this.rafId = null;
         this.readerEl = document.getElementById('reader');
         this.speedLevels = [0.5, 1.0, 1.5, 2.0, 3.0, 5.0];
-        this.speedIdx = 1;
+        this.speedIdx = settings.get('scrollSpeedIdx') || 1;
         this._targetNode = null;
         this._lastTime = 0;
-        this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
-        if (this.settings.scrollSpeedIdx) this.speedIdx = this.settings.scrollSpeedIdx;
         this.speed = this.speedLevels[this.speedIdx];
         this.updateLabel();
     }
@@ -1325,10 +1349,7 @@ class AutoScroll {
         this.speedIdx = (this.speedIdx + 1) % this.speedLevels.length;
         this.speed = this.speedLevels[this.speedIdx];
         this.updateLabel();
-        // 读取最新设置再合并，避免覆盖 UIController 保存的 fontSize 等字段
-        const s = JSON.parse(localStorage.getItem('reader_settings_v2') || '{}');
-        s.scrollSpeedIdx = this.speedIdx;
-        localStorage.setItem('reader_settings_v2', JSON.stringify(s));
+        settings.set('scrollSpeedIdx', this.speedIdx);
     }
 
     updateLabel() {
@@ -1344,20 +1365,17 @@ class TTSController {
         this.loading = false;
         this.queue = [];
         this.queueIdx = 0;
-        this.voice = 'zh-CN-XiaoxiaoNeural';
-        this.speed = 1.0;
-        this._genToken = 0; // 生成令牌：stop() 时递增，异步操作完成后检查是否过期
+        this.voice = settings.get('ttsVoice') || 'zh-CN-XiaoxiaoNeural';
+        this.speed = settings.get('ttsSpeed') || 1.0;
+        this._genToken = 0;
         this._prefetchMap = null;
         this._currentHighlightEl = null;
-        this._advancing = false; // 防止 timeupdate 和 ended 重复触发 playNext
-        this.settings = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
-        this.ttsUrl = this.settings.ttsUrl || '';
-        this.ttsKey = this.settings.ttsKey || '';
+        this._advancing = false;
+        this.ttsUrl = settings.get('ttsUrl') || '';
+        this.ttsKey = settings.get('ttsKey') || '';
         // [Fish Audio 兼容] 临时适配，后续删除
-        this.fishRefId = this.settings.fishRefId || '';
+        this.fishRefId = settings.get('fishRefId') || '';
         // [Fish Audio 兼容] 结束
-        if (this.settings.ttsVoice) this.voice = this.settings.ttsVoice;
-        if (this.settings.ttsSpeed) this.speed = this.settings.ttsSpeed;
 
         this.voices = [
             { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓（女·温暖）' },
@@ -1398,15 +1416,13 @@ class TTSController {
     }
 
     saveSettings() {
-        const s = JSON.parse(localStorage.getItem('reader_settings_v2') || localStorage.getItem('reader_settings_v14') || '{}');
-        s.ttsUrl = this.ttsUrl;
-        s.ttsKey = this.ttsKey;
-        // [Fish Audio 兼容] 临时适配，后续删除
-        s.fishRefId = this.fishRefId;
-        // [Fish Audio 兼容] 结束
-        s.ttsVoice = this.voice;
-        s.ttsSpeed = this.speed;
-        localStorage.setItem('reader_settings_v2', JSON.stringify(s));
+        settings.setMultiple({
+            ttsUrl: this.ttsUrl,
+            ttsKey: this.ttsKey,
+            fishRefId: this.fishRefId,
+            ttsVoice: this.voice,
+            ttsSpeed: this.speed
+        });
     }
 
     isConfigured() {
@@ -1588,17 +1604,20 @@ class TTSController {
         // 释放上一段的 blob URL
         if (this.audio.src.startsWith('blob:')) URL.revokeObjectURL(this.audio.src);
         this.queueIdx++;
-        // 主动触发虚拟滚动加载，确保 collectMoreText 能取到段落
+        // 主动触发虚拟滚动加载，确保 DOM 节点可用
         if (app.loadMore) app.loadMore('bottom');
-        // 如果快到队列末尾，补充后续内容
-        if (this.queueIdx >= this.queue.length - 5) {
-            const lastGidx = this.queue.length > 0 ? this.queue[this.queue.length - 1].gidx : app.currentGlobalIdx;
-            const more = this.collectMoreText(lastGidx);
-            this.queue.push(...more);
-        }
-        // 继续预加载下一段
-        this.prefetchNext();
-        this.playCurrent();
+        // requestAnimationFrame 确保浏览器完成 DOM 更新后再收集文本，防止竞态
+        requestAnimationFrame(() => {
+            // 如果快到队列末尾，补充后续内容
+            if (this.queueIdx >= this.queue.length - 5) {
+                const lastGidx = this.queue.length > 0 ? this.queue[this.queue.length - 1].gidx : app.currentGlobalIdx;
+                const more = this.collectMoreText(lastGidx);
+                this.queue.push(...more);
+            }
+            // 继续预加载下一段
+            this.prefetchNext();
+            this.playCurrent();
+        });
     }
 
     collectMoreText(afterGidx) {
@@ -1722,7 +1741,7 @@ class TTSController {
 
     adjustSpeed(delta) {
         const newSpeed = Math.round((this.speed + delta) * 10) / 10;
-        if (newSpeed >= 1.0 && newSpeed <= 1.5) {
+        if (newSpeed >= 0.5 && newSpeed <= 2.0) {
             this.speed = newSpeed;
             document.getElementById('tts-speed-val').textContent = newSpeed.toFixed(1) + 'x';
             this.saveSettings();
