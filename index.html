@@ -263,7 +263,9 @@ const settings = new (class SettingsManager {
 class StorageManager {
     constructor() {
         this.db = null;
-        this.version = 2;
+        // 版本保持 3：之前升级时部分用户已打开 v3 数据库，降级到 2 会导致 VersionError。
+        // 代码本身只使用 'books' store，v3 多出的 'progress' store  harmless，保留兼容。
+        this.version = 3;
         this.dbName = 'ReaderCache';
     }
 
@@ -274,6 +276,7 @@ class StorageManager {
             request.onupgradeneeded = (e) => {
                 const db = e.target.result;
                 if (!db.objectStoreNames.contains('books')) db.createObjectStore('books', { keyPath: 'id' });
+                if (!db.objectStoreNames.contains('progress')) db.createObjectStore('progress', { keyPath: 'id' });
             };
             request.onsuccess = (e) => { this.db = e.target.result; resolve(); };
             request.onerror = (e) => reject(e);
