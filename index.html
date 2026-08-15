@@ -12,15 +12,18 @@
 
 <script>
   (function() {
-    var META = { default:'#F4F1EA', white:'#FFFFFF', green:'#cce8cf', sepia:'#f4ecd8', dark:'#161618', amoled:'#000000' };
+    var META = { default:'#F4F1EA', white:'#FFFFFF', green:'#cce8cf', dark:'#161618' };
+    // 已下线主题的回退：sepia→default（同为米色系），amoled→dark（同为黑色系）
+    var FALLBACK = { sepia: 'default', amoled: 'dark' };
     try {
-      var s = JSON.parse(localStorage.getItem('reader_settings_v2') || '{}');
-      var t = s.theme || 'default';
-      // auto 主题：跟随系统深浅色，避免首帧闪错主题
-      if (t === 'auto') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'default';
-      document.documentElement.setAttribute('data-theme', t);
-      var m = document.querySelector('meta[name="theme-color"]');
-      if (m) m.content = META[t] || META.default;
+        var s = JSON.parse(localStorage.getItem('reader_settings_v2') || '{}');
+        var t = s.theme || 'default';
+        if (FALLBACK[t]) t = FALLBACK[t];
+        // auto 主题：跟随系统深浅色，避免首帧闪错主题
+        if (t === 'auto') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'default';
+        document.documentElement.setAttribute('data-theme', t);
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.content = META[t] || META.default;
     } catch(e) {
       document.documentElement.setAttribute('data-theme', 'default');
     }
@@ -33,9 +36,7 @@
 [data-theme="default"] { --bg: #F4F1EA; --text: #2D2D2D; --text-secondary: #6B655B; --card: rgba(255,255,255,0.5); --border: rgba(0,0,0,0.04); --accent: #9C8163; --accent-strong: #7E6549; --accent-contrast: #fff; --header-bg: rgba(244, 241, 234, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); --highlight: rgba(156,129,99,0.12); }
 [data-theme="white"] { --bg: #FFFFFF; --text: #1A1A1A; --text-secondary: #666; --card: rgba(0,0,0,0.045); --border: rgba(0,0,0,0.08); --accent: #0055A4; --accent-strong: #0055A4; --accent-contrast: #fff; --header-bg: rgba(255, 255, 255, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); --highlight: rgba(0,85,164,0.08); }
 [data-theme="green"] { --bg: #cce8cf; --text: #2f3e2f; --text-secondary: #4A5C4A; --card: rgba(255,255,255,0.4); --border: rgba(0,0,0,0.05); --accent: #4a7c59; --accent-strong: #4a7c59; --accent-contrast: #fff; --header-bg: rgba(204, 232, 207, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); --highlight: rgba(74,124,89,0.12); }
-[data-theme="sepia"] { --bg: #f4ecd8; --text: #4a4035; --text-secondary: #6F6250; --card: rgba(255,255,255,0.4); --border: rgba(0,0,0,0.05); --accent: #8d6e63; --accent-strong: #7A5C50; --accent-contrast: #fff; --header-bg: rgba(244, 236, 216, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); --highlight: rgba(141,110,99,0.14); }
 [data-theme="dark"] { --bg: #161618; --text: #D4D4D8; --text-secondary: #8E8E99; --card: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.08); --accent: #D4AF37; --accent-strong: #D4AF37; --accent-contrast: #221B06; --header-bg: rgba(22, 22, 24, 0.85); --scrollbar-thumb: rgba(255,255,255,0.15); --scrollbar-thumb-hover: rgba(255,255,255,0.3); --highlight: rgba(212,175,55,0.14); --toast-bg: rgba(248,248,252,0.96); --toast-text: #1A1A1A; --toast-shadow: rgba(0,0,0,0.45); }
-[data-theme="amoled"] { --bg: #000000; --text: #E8E8EC; --text-secondary: #9C9CA8; --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.10); --accent: #D4AF37; --accent-strong: #D4AF37; --accent-contrast: #221B06; --header-bg: rgba(0,0,0,0.9); --scrollbar-thumb: rgba(255,255,255,0.18); --scrollbar-thumb-hover: rgba(255,255,255,0.35); --highlight: rgba(212,175,55,0.16); --toast-bg: rgba(248,248,252,0.96); --toast-text: #1A1A1A; --toast-shadow: rgba(0,0,0,0.5); }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 ::selection { background: var(--highlight); }
@@ -56,8 +57,6 @@ body.ui-visible #header { transform: translateY(0); }
 .header-actions { display: flex; gap: 4px; }
 
 #content-wrapper { max-width: var(--content-max-w); margin: 0 auto; padding: calc(var(--header-h) + 40px) 24px 100px; font-size: 18px; line-height: 1.9; min-height: 100%; letter-spacing: 0.5px; overflow-wrap: break-word; word-break: break-word; }
-/* 衬线正文字体（宋体模式）：正文与章节标题统一书卷气 */
-body.serif-mode #content-wrapper { font-family: Georgia, "Times New Roman", "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "SimSun", serif; }
 #content-wrapper p { text-indent: 2em; margin-bottom: 1.2em; text-align: justify; }
 #content-wrapper .chapter-title { font-size: 22px; font-weight: 600; text-align: center; margin: 2.5em 0 0.8em; padding-bottom: 12px; color: var(--accent); scroll-margin-top: calc(var(--header-h) + 30px); position: relative; overflow-wrap: break-word; word-break: break-word; }
 #content-wrapper .chapter-title::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 240px; height: 2px; background: radial-gradient(ellipse at center, var(--accent) 0%, transparent 60%); opacity: 0.5; }
@@ -86,16 +85,14 @@ body.serif-mode #content-wrapper { font-family: Georgia, "Times New Roman", "Son
 .setting-btns button { padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 14px; cursor: pointer; transition: all .2s; }
 .setting-btns button:hover { border-color: var(--accent); }
 .setting-btns button.active { background: var(--accent-strong); color: var(--accent-contrast); border-color: var(--accent-strong); }
-.theme-dots { display: flex; gap: 12px; flex-wrap: wrap; }
+.theme-dots { display: flex; gap: 16px; }
 .theme-dot { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; position: relative; transition: transform .2s; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
 .theme-dot:hover { transform: scale(1.1); }
 .theme-dot.active { border-color: var(--accent); transform: scale(1.15); }
 .theme-dot[data-t="white"] { background: #fff; border: 1px solid #eee; }
 .theme-dot[data-t="green"] { background: #cce8cf; }
 .theme-dot[data-t="default"] { background: #F4F1EA; }
-.theme-dot[data-t="sepia"] { background: #f4ecd8; }
 .theme-dot[data-t="dark"] { background: #161618; border: 1px solid #333; }
-.theme-dot[data-t="amoled"] { background: #000; border: 1px solid #555; box-shadow: 0 0 0 1px rgba(212,175,55,0.25); }
 .theme-dot[data-t="auto"] { background: linear-gradient(135deg, #F4F1EA 49%, #161618 51%); border: 1px solid rgba(0,0,0,0.15); }
 
 /* Bookshelf UI */
@@ -209,10 +206,9 @@ body.serif-mode #content-wrapper { font-family: Georgia, "Times New Roman", "Son
 <aside id="drawer-toc"><div class="header">目录</div><div class="list" id="toc-list"></div></aside>
 <div id="drawer-settings">
   <div class="setting-row"><span class="setting-label">字号</span><div class="setting-btns"><button id="font-dec">A-</button><span id="font-val" style="min-width: 30px; text-align: center; font-weight: 600;">18</span><button id="font-inc">A+</button></div></div>
-  <div class="setting-row"><span class="setting-label">正文字体</span><div class="setting-btns"><button data-font="serif">宋体</button><button data-font="sans">黑体</button></div></div>
   <div class="setting-row"><span class="setting-label">繁简</span><div class="setting-btns"><button id="btn-t2s" style="padding: 4px 16px;">繁→简</button></div></div>
   <div class="setting-row"><span class="setting-label">行距</span><div class="setting-btns"><button data-line="1.6">紧凑</button><button data-line="1.9" class="active">适中</button><button data-line="2.2">宽松</button></div></div>
-  <div class="setting-row"><span class="setting-label">主题</span><div class="theme-dots"><div class="theme-dot" data-t="white" title="极简白"></div><div class="theme-dot" data-t="green" title="护眼绿"></div><div class="theme-dot" data-t="default" title="暖灰纸"></div><div class="theme-dot" data-t="sepia" title="羊皮纸"></div><div class="theme-dot" data-t="dark" title="深邃夜"></div><div class="theme-dot" data-t="amoled" title="纯黑（AMOLED）"></div><div class="theme-dot" data-t="auto" title="自动（跟随系统）"></div></div></div>
+  <div class="setting-row"><span class="setting-label">主题</span><div class="theme-dots"><div class="theme-dot" data-t="white" title="极简白"></div><div class="theme-dot" data-t="green" title="护眼绿"></div><div class="theme-dot" data-t="default" title="暖灰纸"></div><div class="theme-dot" data-t="dark" title="深邃夜"></div><div class="theme-dot" data-t="auto" title="自动（跟随系统）"></div></div></div>
   <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 3.1</span></div>
 </div>
 
@@ -253,7 +249,7 @@ body.serif-mode #content-wrapper { font-family: Georgia, "Times New Roman", "Son
 const settings = new (class SettingsManager {
     constructor() {
         this._data = this._load();
-        this._defaults = { fontSize: 18, lineHeight: 1.9, theme: 'default', previousTheme: 'default', t2s: false, bodySerif: true };
+        this._defaults = { fontSize: 18, lineHeight: 1.9, theme: 'default', previousTheme: 'default', t2s: false };
         this._repair();
     }
     _load() {
@@ -926,7 +922,9 @@ class UIController {
         this.contentWrapper = document.getElementById('content-wrapper');
         this.saveTimer = null;
         // 主题 → 手机状态栏颜色映射（随主题切换同步）
-        this.THEME_META = { default:'#F4F1EA', white:'#FFFFFF', green:'#cce8cf', sepia:'#f4ecd8', dark:'#161618', amoled:'#000000' };
+        this.THEME_META = { default:'#F4F1EA', white:'#FFFFFF', green:'#cce8cf', dark:'#161618' };
+        // 已下线主题的回退映射
+        this.THEME_FALLBACK = { sepia: 'default', amoled: 'dark' };
     }
 
     init() {
@@ -1068,13 +1066,6 @@ class UIController {
                 this.applySettings(); 
             }; 
         });
-        // 正文字体切换：宋体（衬线）/ 黑体（无衬线）
-        document.querySelectorAll('[data-font]').forEach(btn => {
-            btn.onclick = () => {
-                settings.set('bodySerif', btn.dataset.font === 'serif');
-                this.applySettings();
-            };
-        });
         document.querySelectorAll('.theme-dot').forEach(dot => { 
             dot.onclick = () => { 
                 settings.set('theme', dot.dataset.t); 
@@ -1126,7 +1117,9 @@ class UIController {
     }
 
     applySettings() {
-        const raw = settings.get('theme') || 'default';
+        let raw = settings.get('theme') || 'default';
+        // 已下线主题回退（sepia→default，amoled→dark），老用户设置自动迁移
+        if (this.THEME_FALLBACK[raw]) raw = this.THEME_FALLBACK[raw];
         // auto 主题：解析为系统当前深浅色
         const resolved = raw === 'auto'
             ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default')
@@ -1141,17 +1134,13 @@ class UIController {
             this.contentWrapper.style.fontSize = settings.get('fontSize') + 'px'; 
             this.contentWrapper.style.lineHeight = settings.get('lineHeight');
         }
-        // 正文字体：宋体模式给正文加衬线字体（含章节标题）
-        const serifOn = !!settings.get('bodySerif');
-        document.body.classList.toggle('serif-mode', serifOn);
-        document.querySelectorAll('[data-font]').forEach(el => el.classList.toggle('active', (el.dataset.font === 'serif') === serifOn));
         const fontVal = document.getElementById('font-val');
         if (fontVal) fontVal.textContent = settings.get('fontSize');
         document.querySelectorAll('.theme-dot').forEach(el => el.classList.toggle('active', el.dataset.t === raw));
         document.querySelectorAll('[data-line]').forEach(el => el.classList.toggle('active', parseFloat(el.dataset.line) === settings.get('lineHeight')));
         
         const btn = document.getElementById('btn-night-mode');
-        const isDark = resolved === 'dark' || resolved === 'amoled';
+        const isDark = resolved === 'dark';
         if (btn) {
             btn.innerHTML = isDark 
                 ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
@@ -1193,14 +1182,16 @@ class UIController {
     }
 
     toggleTheme() {
-        const raw = settings.get('theme') || 'default';
+        let raw = settings.get('theme') || 'default';
+        if (this.THEME_FALLBACK[raw]) raw = this.THEME_FALLBACK[raw];
         const resolved = raw === 'auto'
             ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default')
             : raw;
-        if (resolved === 'dark' || resolved === 'amoled') {
+        if (resolved === 'dark') {
             // 从暗色切回亮色：previousTheme 若也是暗色则回退到默认暖色
             let prev = settings.get('previousTheme') || 'default';
-            if (prev === 'dark' || prev === 'amoled') prev = 'default';
+            if (this.THEME_FALLBACK[prev]) prev = this.THEME_FALLBACK[prev];
+            if (prev === 'dark') prev = 'default';
             settings.set('theme', prev);
         } else {
             settings.set('previousTheme', raw);
