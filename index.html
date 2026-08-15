@@ -47,6 +47,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .page::-webkit-scrollbar-thumb:hover, #drawer-toc .list::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 .page { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; transition: opacity .3s, visibility .3s; }
 .page.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+/* [Bug1] 关闭浏览器滚动锚定，滚动补偿统一由 _pinViewport 节点锚定处理，跨浏览器行为一致 */
+#reader { overflow-anchor: none; }
 
 #header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: var(--header-h); display: flex; align-items: center; justify-content: center; background: var(--header-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-bottom: 1px solid var(--border); transform: translateY(-100%); transition: transform .35s cubic-bezier(.4,0,.2,1), background-color .4s, border-color .4s; }
 body.ui-visible #header { transform: translateY(0); }
@@ -302,20 +304,26 @@ class StorageManager {
 
     async set(id, data) {
         if(!this.db) await this.init();
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const tx = this.db.transaction('books', 'readwrite');
             tx.objectStore('books').put({ id, ...data, timestamp: Date.now() });
             tx.oncomplete = () => resolve();
+            // [Bug2] 事务失败/中止也必须 settle，否则调用方 await 永久挂起，loading 遮罩卡死
+            tx.onerror = () => reject(tx.error || new Error('IndexedDB 写入失败'));
+            tx.onabort = () => reject(tx.error || new Error('IndexedDB 写入被中止'));
         });
     }
 
     // v3: 进度写入独立的小记录，避免每次保存进度都整本重写（大书可达数 MB）
     async updateProgress(id, progressGidx) {
         if(!this.db) await this.init();
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const tx = this.db.transaction('progress', 'readwrite');
             tx.objectStore('progress').put({ id, progressGidx, timestamp: Date.now() });
             tx.oncomplete = () => resolve();
+            // [Bug2] 同 set()：失败也要 settle
+            tx.onerror = () => reject(tx.error || new Error('IndexedDB 进度写入失败'));
+            tx.onabort = () => reject(tx.error || new Error('IndexedDB 进度写入被中止'));
         });
     }
 
@@ -331,21 +339,27 @@ class StorageManager {
 
     async delete(id) {
         if(!this.db) await this.init();
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const tx = this.db.transaction(['books', 'progress'], 'readwrite');
             tx.objectStore('books').delete(id); 
             tx.objectStore('progress').delete(id);
             tx.oncomplete = () => resolve();
+            // [Bug2] 同 set()：失败也要 settle
+            tx.onerror = () => reject(tx.error || new Error('IndexedDB 删除失败'));
+            tx.onabort = () => reject(tx.error || new Error('IndexedDB 删除被中止'));
         });
     }
 
     async clearAll() {
         if(!this.db) await this.init();
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const tx = this.db.transaction(['books', 'progress'], 'readwrite');
             tx.objectStore('books').clear(); 
             tx.objectStore('progress').clear();
             tx.oncomplete = () => resolve();
+            // [Bug2] 同 set()：失败也要 settle
+            tx.onerror = () => reject(tx.error || new Error('IndexedDB 清空失败'));
+            tx.onabort = () => reject(tx.error || new Error('IndexedDB 清空被中止'));
         });
     }
 }
@@ -512,6 +526,11 @@ class Toast {
     }
 }
 
+// [Bug1] 虚拟滚动滑动窗口缓冲：当前阅读位置上/下各保留 80 段。
+// 80 段约 3~4 屏，远大于 IntersectionObserver 的 150% rootMargin 预拉距离，不会引起加载抖动
+const BUFFER_ABOVE = 80;
+const BUFFER_BELOW = 80;
+
 class ReaderApp {
     constructor() {
         this.bookId = null;
@@ -593,7 +612,10 @@ class ReaderApp {
         // No cache, fetch from network
         const [meta, text] = await Promise.all([
             fetch(`/api/books/${encodeURIComponent(bookId)}`).then(r=>r.json()),
-            fetch(`/api/books/${encodeURIComponent(bookId)}/content`).then(r=>r.arrayBuffer()).then(buf => Utils.decodeText(buf))
+            // [Bug4] 检查 res.ok，防止 404 错误文本被当作正文解析成一本"错误信息之书"
+            fetch(`/api/books/${encodeURIComponent(bookId)}/content`)
+                .then(r => { if (!r.ok) throw new Error(`正文下载失败 (${r.status})`); return r.arrayBuffer(); })
+                .then(buf => Utils.decodeText(buf))
         ]);
         
         this.loadingText.textContent = '正在解析...';
@@ -670,10 +692,18 @@ class ReaderApp {
     }
 
     async deleteBook(id) {
-        if (confirm('确定删除这本书吗？')) { 
+        if (!confirm('确定删除这本书吗？')) return;
+        // [Bug7] 补齐错误处理：任一步失败都不再产生未处理 rejection，且始终刷新列表反映真实状态
+        try {
             await this.storage.delete(id); 
-            await fetch(`/api/books/${encodeURIComponent(id)}`, { method:'DELETE' }); 
-            await this.renderBookList(); 
+            const res = await fetch(`/api/books/${encodeURIComponent(id)}`, { method:'DELETE' }); 
+            if (!res.ok) throw new Error(`服务端删除失败 (${res.status})`);
+            Toast.show('已删除');
+        } catch (e) {
+            console.error(e);
+            Toast.show('删除失败: ' + e.message);
+        } finally {
+            await this.renderBookList();
         }
     }
 
@@ -682,6 +712,13 @@ class ReaderApp {
         this.loadingMask.classList.remove('hidden'); this.loadingText.textContent = '正在加载书籍...';
         try {
             const meta = await this.initBook(id);
+            // [Bug7] 记录书名供 MediaSession 使用（此前从未赋值，album 永远显示兜底值）
+            this.currentBookName = meta.name || '';
+            // [Bug7] 空书保护：totalParagraphs 为 0 时 Math.min(progress, -1) 得 -1，后续渲染空白
+            if (!this.totalParagraphs || !this.chMap.length) {
+                Toast.show('书籍内容为空或解析失败');
+                return;
+            }
             document.getElementById('bookshelf').classList.add('hidden');
             document.getElementById('reader').classList.remove('hidden');
             
@@ -835,51 +872,89 @@ class ReaderApp {
             this._localParagraphs.slice(this.windowEnd + 1, newEnd + 1).forEach((p, i) => f.appendChild(this.createNode(p, this.windowEnd + 1 + i)));
             document.getElementById('content-wrapper').insertBefore(f, document.getElementById('sentinel-bottom')); 
             this.windowEnd = newEnd;
+            // [Bug1] 窗口滑动：向下扩张后收缩上沿，以当前阅读位置为锚保留上方 BUFFER_ABOVE 段
+            const desiredStart = Math.max(0, this.currentGlobalIdx - BUFFER_ABOVE);
+            if (desiredStart > this.windowStart) this.trimWindowTop(desiredStart);
         } else if (direction === 'top') {
             const newStart = Math.max(0, this.windowStart - 40);
             if (newStart === this.windowStart) return;
             const f = document.createDocumentFragment();
             this._localParagraphs.slice(newStart, this.windowStart).forEach((p, i) => f.appendChild(this.createNode(p, newStart + i)));
+            const w = document.getElementById('content-wrapper');
             const sTop = document.getElementById('sentinel-top');
-            const oldScrollHeight = document.getElementById('content-wrapper').scrollHeight;
-            document.getElementById('content-wrapper').insertBefore(f, sTop.nextSibling); 
+            // [Bug6] 锚 = 原窗口第一段：插入发生在它之前，插入后它应保持原位
+            const anchor = sTop.nextElementSibling;
+            // [Bug6] 节点锚定补偿：按锚节点在 DOM 变更前后的真实位移修正 scrollTop。
+            // 位移量是布局后的事实，自动涵盖 margin 折叠/取整，且与浏览器滚动锚定幂等（不会双重补偿）
+            this._pinViewport(anchor, () => w.insertBefore(f, sTop.nextSibling));
             this.windowStart = newStart;
-            document.getElementById('reader').scrollTop += (document.getElementById('content-wrapper').scrollHeight - oldScrollHeight);
+            // [Bug1] 窗口滑动：向上扩张后收缩下沿，保留下方 BUFFER_BELOW 段
+            const desiredEnd = Math.min(this.totalParagraphs - 1, this.currentGlobalIdx + BUFFER_BELOW);
+            if (desiredEnd < this.windowEnd) this.trimWindowBottom(desiredEnd);
         }
-        this.cleanUpDOM();
     }
 
-    cleanUpDOM() {
-        const w = document.getElementById('content-wrapper');
+    // [Bug6] 节点锚定：记录锚节点变更前位置 -> 执行 DOM 变更 -> 按位移差修正 scrollTop
+    _pinViewport(anchorEl, mutate) {
         const reader = document.getElementById('reader');
-        // 清理顶部超出窗口的节点，移除前测量总高度并补偿 scrollTop 防止视觉跳变
-        let sTop = document.getElementById('sentinel-top');
-        let node = sTop ? sTop.nextSibling : w.firstChild;
-        let removedHeight = 0;
-        while (node && node.id !== 'sentinel-bottom') {
-            if (parseInt(node.dataset.gidx) < this.windowStart) {
-                removedHeight += node.offsetHeight;
-                let next = node.nextSibling;
-                w.removeChild(node);
-                node = next;
-            } else break;
+        if (!anchorEl || !anchorEl.parentNode) { mutate(); return; }
+        const before = anchorEl.getBoundingClientRect().top;
+        mutate();
+        const after = anchorEl.getBoundingClientRect().top;
+        if (after !== before) reader.scrollTop += after - before;
+    }
+
+    // [Bug1] 裁剪窗口上沿至 keepFrom：移除 gidx < keepFrom 的节点，锚定第一个保留节点防跳变
+    trimWindowTop(keepFrom) {
+        const w = document.getElementById('content-wrapper');
+        const sTop = document.getElementById('sentinel-top');
+        if (!sTop) return;
+        // 找锚：第一个 gidx >= keepFrom 的节点
+        let anchor = sTop.nextSibling;
+        while (anchor && anchor.id !== 'sentinel-bottom') {
+            const g = anchor.dataset.gidx !== undefined ? parseInt(anchor.dataset.gidx) : NaN;
+            if (!isNaN(g) && g >= keepFrom) break;
+            anchor = anchor.nextSibling;
         }
-        if (removedHeight > 0) {
-            reader.scrollTop -= removedHeight;
-        }
-        // 清理底部超出窗口的节点
-        let sBot = document.getElementById('sentinel-bottom');
-        node = sBot ? sBot.previousSibling : w.lastChild;
+        if (!anchor || anchor.id === 'sentinel-bottom') return; // 无可保留节点（异常保护）
+        this._pinViewport(anchor, () => {
+            let node = sTop.nextSibling;
+            while (node && node.id !== 'sentinel-bottom') {
+                const g = node.dataset.gidx !== undefined ? parseInt(node.dataset.gidx) : NaN;
+                if (!isNaN(g) && g < keepFrom) {
+                    const next = node.nextSibling;
+                    w.removeChild(node);
+                    node = next;
+                } else break;
+            }
+        });
+        this.windowStart = keepFrom;
+    }
+
+    // [Bug1] 裁剪窗口下沿至 keepTo：视口以下内容增删不影响滚动位置，无需补偿
+    trimWindowBottom(keepTo) {
+        const w = document.getElementById('content-wrapper');
+        const sBot = document.getElementById('sentinel-bottom');
+        if (!sBot) return;
+        let node = sBot.previousSibling;
         while (node && node.id !== 'sentinel-top') {
-            if (parseInt(node.dataset.gidx) > this.windowEnd) {
-                let prev = node.previousSibling;
+            const g = node.dataset.gidx !== undefined ? parseInt(node.dataset.gidx) : NaN;
+            if (!isNaN(g) && g > keepTo) {
+                const prev = node.previousSibling;
                 w.removeChild(node);
                 node = prev;
             } else break;
         }
+        this.windowEnd = keepTo;
     }
 
     teleportTo(centerIdx) {
+        // [Bug1] 立即同步阅读位置/章节：防止裁剪逻辑在 scroll 事件到来前用旧位置误裁窗口
+        this.currentGlobalIdx = centerIdx;
+        if (this.chMap.length) {
+            this.currentChapterIdx = this.getChapterByGlobalIdx(centerIdx).chapterIdx;
+            this.updateHeader(this.currentChapterIdx);
+        }
         const newStart = Math.max(0, centerIdx - 40); 
         const newEnd = Math.min(this.totalParagraphs - 1, centerIdx + 40);
         const w = document.getElementById('content-wrapper');
@@ -900,7 +975,7 @@ class ReaderApp {
             const targetNode = w.querySelector(`[data-gidx="${centerIdx}"]`);
             if (targetNode) {
                 void targetNode.offsetHeight; 
-                targetNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                targetNode.scrollIntoView({ behavior: 'auto', block: 'start' }); // [Bug1] 跳转场景瞬时定位，平滑滚动会被 scrollTop 补偿打断
             }
             // 更新进度条位置
             uiController.updateProgressBar();
@@ -933,8 +1008,14 @@ class UIController {
         document.getElementById('file-input').onchange = (e) => { if(e.target.files[0]) app.importBook(e.target.files[0]); e.target.value=''; };
         document.getElementById('clear-cache-btn').onclick = async () => {
             if(confirm('确定清理所有书籍的本地缓存吗？\n(下次打开书籍时将重新下载并解析)')) {
-                await app.storage.clearAll();
-                Toast.show('缓存已清理');
+                // [Bug2] clearAll 现在会 reject，这里补齐 catch 防止未处理 rejection
+                try {
+                    await app.storage.clearAll();
+                    Toast.show('缓存已清理');
+                } catch (e) {
+                    console.error(e);
+                    Toast.show('缓存清理失败');
+                }
             }
         };
         
@@ -965,6 +1046,8 @@ class UIController {
                 const domNodes = this.contentWrapper.children; 
                 let topGidx = app.windowStart;
                 for (let i = 0; i < domNodes.length; i++) { 
+                    // [Bug5] 跳过哨兵节点（无 data-gidx），parseInt(undefined) 得 NaN 会损坏进度
+                    if (domNodes[i].dataset.gidx === undefined) continue;
                     // 使用 getBoundingClientRect 替代 offsetTop，语义更准确，不依赖 offsetParent 链
                     if (domNodes[i].getBoundingClientRect().top - readerTop <= 100) topGidx = parseInt(domNodes[i].dataset.gidx); 
                     else break; 
@@ -1335,7 +1418,7 @@ class AutoScroll {
         this.rafId = null;
         this.readerEl = document.getElementById('reader');
         this.speedLevels = [0.5, 1.0, 1.5, 2.0, 3.0, 5.0];
-        this.speedIdx = settings.get('scrollSpeedIdx') || 1;
+        this.speedIdx = settings.get('scrollSpeedIdx') ?? 1; // [Bug7] ?? 不吞掉合法档位 0（0.5x）
         this._targetNode = null;
         this._lastTime = 0;
         this.speed = this.speedLevels[this.speedIdx];
@@ -1459,6 +1542,8 @@ class TTSController {
         this._prefetchMap = null;
         this._currentHighlightEl = null;
         this._advancing = false;
+        this._unlocked = false;       // [iOS] 音频是否已在用户手势内解锁
+        this._suppressEvents = false; // [iOS] 解锁期间屏蔽 ended/error 事件，防止误推进播放队列
         this.ttsUrl = settings.get('ttsUrl') || '';
         this.ttsKey = settings.get('ttsKey') || '';
         // [Fish Audio 兼容] 临时适配，后续删除
@@ -1482,7 +1567,8 @@ class TTSController {
         // [修复] 不再提前 2 秒切换段落——那会把每段末尾约 2 秒（≈8~12 个字）的语音掐掉。
         // ended 为主触发：完整播完当前段再进下一段（下一句已预取为本地 blob，衔接耗时极短，几乎无感）。
         this.audio.addEventListener('ended', () => {
-            if (this._advancing) return;
+            // _suppressEvents: 解锁静音音轨自然结束不推进；!playing: stop() 后迟到的 ended 不推进
+            if (this._suppressEvents || !this.playing || this._advancing) return;
             this._advancing = true;
             this.playNext();
         });
@@ -1496,6 +1582,7 @@ class TTSController {
             }
         });
         this.audio.addEventListener('error', (e) => {
+            if (this._suppressEvents) return; // [iOS] 解锁音轨失败不算播放错误
             if (!this.playing && !this.loading) return; // stop() 清空 src 会触发 error，忽略
             console.error('TTS audio error', e);
             this.loading = false;
@@ -1522,7 +1609,27 @@ class TTSController {
 
     togglePlay() {
         if (this.playing || this.loading) { this.stop(); }
-        else { this.startReading(); }
+        else {
+            this.unlockAudio(); // [iOS] 必须在用户手势同步调用栈内解锁，否则首次 play() 报 NotAllowedError
+            this.startReading();
+        }
+    }
+
+    // [iOS] 播放一段极短静音 WAV 完成媒体解锁。期间事件由 _suppressEvents 屏蔽；
+    // 解锁 play() 在首次网络 fetch 完成前就已结束，不会与正式播放的 src 赋值竞争
+    unlockAudio() {
+        if (this._unlocked) return;
+        this._unlocked = true;
+        this._suppressEvents = true;
+        try {
+            this.audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+            this.audio.play().catch(() => {}).finally(() => {
+                this._suppressEvents = false;
+                if (!this.audio.paused) this.audio.pause();
+            });
+        } catch (e) {
+            this._suppressEvents = false;
+        }
     }
 
     startReading() {
@@ -1635,6 +1742,11 @@ class TTSController {
         await Promise.all(promises);
     }
 
+    // [Bug7] AbortSignal.timeout 在旧版 iOS Safari (<16) 不存在，需能力检测降级
+    _timeoutSignal(ms) {
+        return (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) ? AbortSignal.timeout(ms) : undefined;
+    }
+
     async fetchTTS(text) {
         // [Fish Audio 兼容] 临时适配，后续删除
         // 检测 URL 是否包含 fish.audio，自动切换到 Fish Audio API 格式
@@ -1649,7 +1761,7 @@ class TTSController {
         const res = await fetch(url, {
             method: 'POST',
             headers,
-            signal: AbortSignal.timeout(30000),
+            signal: this._timeoutSignal(30000),
             body: JSON.stringify({
                 model: 'tts-1',
                 input: text.slice(0, 2000),
@@ -1681,7 +1793,7 @@ class TTSController {
         const res = await fetch('/api/tts-proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(30000),
+            signal: this._timeoutSignal(30000),
             body: JSON.stringify(proxyBody)
         });
         if (!res.ok) {
@@ -1733,7 +1845,8 @@ class TTSController {
         this.audio.pause();
         this.audio.currentTime = 0;
         if (this.audio.src.startsWith('blob:')) URL.revokeObjectURL(this.audio.src);
-        this.audio.src = '';
+        this.audio.removeAttribute('src'); // [Bug7] src='' 会按规范解析为页面 URL 并触发一次无效加载
+        this.audio.load();
         // 清理预加载的 blob URL，防止内存泄漏
         if (this._prefetchMap) {
             this._prefetchMap.forEach(url => URL.revokeObjectURL(url));
