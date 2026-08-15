@@ -5,23 +5,28 @@ export default {
     
     // 1. 静态文件托管（2.0: 添加 no-cache 头避免 CDN 缓存旧版）
     if (!url.pathname.startsWith('/api/')) {
-      // favicon.ico 重定向到 GitHub 上的图标
+      // favicon.ico 重定向到 GitHub 上的图标（302 临时，避免浏览器长期缓存错误地址）
       if (url.pathname === '/favicon.ico') {
-        return Response.redirect('https://raw.githubusercontent.com/CDKe-2022/reader/refs/heads/main/icon-192.png', 301);
+        return Response.redirect('https://raw.githubusercontent.com/CDKe-2022/reader/refs/heads/main/icon-192.png', 302);
       }
-      const assetResponse = await env.ASSETS.fetch(request);
-      const newHeaders = new Headers(assetResponse.headers);
-      // HTML 文件不缓存，确保用户始终拿到最新版
-      if (url.pathname === '/' || url.pathname.endsWith('.html')) {
-        newHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      } else if (url.pathname.endsWith('.css') || url.pathname.endsWith('.js')) {
-        newHeaders.set('Cache-Control', 'public, max-age=86400');
+      // [Bug7] 静态资产分支包裹异常处理，ASSETS 异常时不再裸 500
+      try {
+        const assetResponse = await env.ASSETS.fetch(request);
+        const newHeaders = new Headers(assetResponse.headers);
+        // HTML 文件不缓存，确保用户始终拿到最新版
+        if (url.pathname === '/' || url.pathname.endsWith('.html')) {
+          newHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        } else if (url.pathname.endsWith('.css') || url.pathname.endsWith('.js')) {
+          newHeaders.set('Cache-Control', 'public, max-age=86400');
+        }
+        return new Response(assetResponse.body, {
+          status: assetResponse.status,
+          statusText: assetResponse.statusText,
+          headers: newHeaders
+        });
+      } catch (err) {
+        return new Response('Static asset error: ' + err.message, { status: 500 });
       }
-      return new Response(assetResponse.body, {
-        status: assetResponse.status,
-        statusText: assetResponse.statusText,
-        headers: newHeaders
-      });
     }
     
     const path = url.pathname;
@@ -158,11 +163,15 @@ export default {
         const id = decodeURIComponent(progressMatch[1]);
         const data = await request.json();
         
-        await db.prepare(`
+        const result = await db.prepare(`
           UPDATE books 
           SET progress_gidx = ?, current_chapter_title = ? 
           WHERE id = ?
         `).bind(data.progressGidx, data.currentChapterTitle, id).run();
+        // [Bug7] changes=0 说明 id 不存在，不再静默成功
+        if (!result.meta || result.meta.changes === 0) {
+          return new Response(JSON.stringify({ error: 'Book not found' }), { status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        }
         
         return Response.json({ success: true }, { headers: corsHeaders });
       }
@@ -180,8 +189,13 @@ export default {
       // CORS 代理：转发 TTS 请求到外部 API，解决浏览器跨域限制
       if (path === '/api/tts-proxy' && request.method === 'POST') {
         const body = await request.json();
-        const targetUrl = body._target;
-        if (!targetUrl) return new Response(JSON.stringify({ error: 'Missing _target' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        // [Bug3] 目标白名单校验，堵住开放代理/SSRF：只允许转发到已知 TTS 服务（自建服务时在此数组追加 host）
+        let targetUrl = null;
+        try { targetUrl = new URL(body._target || ''); } catch (e) {}
+        const ALLOWED_TTS_HOSTS = ['api.fish.audio'];
+        if (!targetUrl || targetUrl.protocol !== 'https:' || !ALLOWED_TTS_HOSTS.includes(targetUrl.hostname)) {
+          return new Response(JSON.stringify({ error: 'Target not allowed' }), { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        }
         
         const headers = { 'Content-Type': 'application/json' };
         if (body._auth) headers['Authorization'] = body._auth;
@@ -193,7 +207,7 @@ export default {
         if (body.reference_id) proxyBody.reference_id = body.reference_id;
         if (body.speed) proxyBody.speed = body.speed;
 
-        const upstreamRes = await fetch(targetUrl, {
+        const upstreamRes = await fetch(targetUrl.href, {
           method: 'POST',
           headers,
           body: JSON.stringify(proxyBody)
@@ -213,7 +227,7 @@ export default {
       return new Response('API Not Found', { status: 404, headers: corsHeaders });
       
     } catch (err) {
-      return new Response(JSON.stringify({ error: err.message, stack: err.stack }), { 
+      return new Response(JSON.stringify({ error: err.message }), { // [Bug3] 不返回 err.stack，避免泄漏服务端内部信息
         status: 500, 
         headers: { 'Content-Type': 'application/json', ...corsHeaders } 
       });
