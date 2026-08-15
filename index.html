@@ -47,8 +47,8 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .page::-webkit-scrollbar-thumb:hover, #drawer-toc .list::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 .page { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; transition: opacity .3s, visibility .3s; }
 .page.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-/* [Bug1] 关闭浏览器滚动锚定，滚动补偿统一由 _pinViewport 节点锚定处理，跨浏览器行为一致 */
-#reader { overflow-anchor: none; }
+/* [性能] 有意保持浏览器原生滚动锚定开启：上方内容增删时 Chrome/Firefox 自动补偿且不打断惯性滚动；
+   _pinViewport 的节点锚定测量与原生锚定幂等（测到残余位移才补，通常为 0），旧 Safari 无原生锚定时兜底精确补偿 */
 
 #header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: var(--header-h); display: flex; align-items: center; justify-content: center; background: var(--header-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-bottom: 1px solid var(--border); transform: translateY(-100%); transition: transform .35s cubic-bezier(.4,0,.2,1), background-color .4s, border-color .4s; }
 body.ui-visible #header { transform: translateY(0); }
@@ -527,9 +527,11 @@ class Toast {
 }
 
 // [Bug1] 虚拟滚动滑动窗口缓冲：当前阅读位置上/下各保留 80 段。
-// 80 段约 3~4 屏，远大于 IntersectionObserver 的 150% rootMargin 预拉距离，不会引起加载抖动
+// [性能] 预载深度：哨兵触发距离 = 1 屏可视 + PRELOAD_SCREENS 屏预载（与 rootMargin 300% 对齐），
+// 快速滚动时 _fillCheck 逐帧接力续填，保证渲染内容始终领先视口
 const BUFFER_ABOVE = 80;
 const BUFFER_BELOW = 80;
+const PRELOAD_SCREENS = 2;
 
 class ReaderApp {
     constructor() {
@@ -849,9 +851,10 @@ class ReaderApp {
         if (!sBot) { sBot = document.createElement('div'); sBot.id = 'sentinel-bottom'; sBot.style.height = '1px'; document.getElementById('content-wrapper').appendChild(sBot); }
         
         const r = document.getElementById('reader');
-        this.obsBot = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && this.windowEnd < this.totalParagraphs - 1) this.loadMore('bottom'); }, { root: r, rootMargin: '150%' });
+        // [性能] 预拉边距 150% -> 300%：快速滚动时有约 3 屏缓冲，配合 _fillCheck 逐帧续填
+        this.obsBot = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && this.windowEnd < this.totalParagraphs - 1) this.loadMore('bottom'); }, { root: r, rootMargin: '300% 0px 300% 0px' });
         this.obsBot.observe(sBot);
-        this.obsTop = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && this.windowStart > 0) this.loadMore('top'); }, { root: r, rootMargin: '150%' });
+        this.obsTop = new IntersectionObserver((entries) => { if (entries[0].isIntersecting && this.windowStart > 0) this.loadMore('top'); }, { root: r, rootMargin: '300% 0px 300% 0px' });
         this.obsTop.observe(sTop);
     }
 
@@ -872,9 +875,10 @@ class ReaderApp {
             this._localParagraphs.slice(this.windowEnd + 1, newEnd + 1).forEach((p, i) => f.appendChild(this.createNode(p, this.windowEnd + 1 + i)));
             document.getElementById('content-wrapper').insertBefore(f, document.getElementById('sentinel-bottom')); 
             this.windowEnd = newEnd;
-            // [Bug1] 窗口滑动：向下扩张后收缩上沿，以当前阅读位置为锚保留上方 BUFFER_ABOVE 段
-            const desiredStart = Math.max(0, this.currentGlobalIdx - BUFFER_ABOVE);
-            if (desiredStart > this.windowStart) this.trimWindowTop(desiredStart);
+            // [性能] 本回调只做插入（先上屏）；裁剪推迟到下一帧、续填由 _fillCheck 逐帧接力，
+            // 消除"插入+裁剪+两次强制布局"同帧长任务造成的滚动掉帧
+            this._fillCheck();
+            this._scheduleTrim();
         } else if (direction === 'top') {
             const newStart = Math.max(0, this.windowStart - 40);
             if (newStart === this.windowStart) return;
@@ -888,9 +892,8 @@ class ReaderApp {
             // 位移量是布局后的事实，自动涵盖 margin 折叠/取整，且与浏览器滚动锚定幂等（不会双重补偿）
             this._pinViewport(anchor, () => w.insertBefore(f, sTop.nextSibling));
             this.windowStart = newStart;
-            // [Bug1] 窗口滑动：向上扩张后收缩下沿，保留下方 BUFFER_BELOW 段
-            const desiredEnd = Math.min(this.totalParagraphs - 1, this.currentGlobalIdx + BUFFER_BELOW);
-            if (desiredEnd < this.windowEnd) this.trimWindowBottom(desiredEnd);
+            this._fillCheck();
+            this._scheduleTrim();
         }
     }
 
@@ -902,6 +905,45 @@ class ReaderApp {
         mutate();
         const after = anchorEl.getBoundingClientRect().top;
         if (after !== before) reader.scrollTop += after - before;
+    }
+
+    // [性能] 裁剪调度：合并到下一帧执行，且用执行时刻最新的 currentGlobalIdx 计算目标窗口。
+    // loadMore 回调内只保留插入；裁剪滞后一帧，用户无感知但主线程压力减半
+    _scheduleTrim() {
+        if (this._trimQueued) return;
+        this._trimQueued = true;
+        requestAnimationFrame(() => {
+            this._trimQueued = false;
+            if (!this.bookId) return;
+            const desiredStart = Math.max(0, this.currentGlobalIdx - BUFFER_ABOVE);
+            if (desiredStart > this.windowStart) this.trimWindowTop(desiredStart);
+            const desiredEnd = Math.min(this.totalParagraphs - 1, this.currentGlobalIdx + BUFFER_BELOW);
+            if (desiredEnd < this.windowEnd) this.trimWindowBottom(desiredEnd);
+        });
+    }
+
+    // [性能] 几何续填：哨兵仍在预载区内（大屏/短段落时 observer 插入一批后哨兵未离开边距，
+    // 不会重复触发）则下一帧再补一批，逐帧填充不阻塞；到书首/书尾自然停止。
+    // 快速滚动追近渲染边界时同样由此接力追赶
+    _fillCheck() {
+        if (!this.bookId || this._fillQueued) return;
+        this._fillQueued = true;
+        requestAnimationFrame(() => {
+            this._fillQueued = false;
+            const reader = document.getElementById('reader');
+            const rTop = reader.getBoundingClientRect().top;
+            const vh = reader.clientHeight || 1;
+            const sBot = document.getElementById('sentinel-bottom');
+            if (sBot && this.windowEnd < this.totalParagraphs - 1 &&
+                sBot.getBoundingClientRect().top < rTop + vh * (1 + PRELOAD_SCREENS)) {
+                this.loadMore('bottom'); return; // loadMore 内部会再次 _fillCheck，形成逐帧接力
+            }
+            const sTop = document.getElementById('sentinel-top');
+            if (sTop && this.windowStart > 0 &&
+                sTop.getBoundingClientRect().bottom > rTop - vh * PRELOAD_SCREENS) {
+                this.loadMore('top');
+            }
+        });
     }
 
     // [Bug1] 裁剪窗口上沿至 keepFrom：移除 gidx < keepFrom 的节点，锚定第一个保留节点防跳变
@@ -1035,6 +1077,29 @@ class UIController {
 
         this.applySettings();
         
+        // [性能] 每帧轻量更新阅读位置（早退循环），供滑动窗口裁剪与续填使用。
+        // 下方原有的 60ms 防抖是"停稳才跑"，连续滚动期间 currentGlobalIdx 会一直过期，
+        // 导致裁剪积压后一次性大删；此处 rAF 节流保证位置始终新鲜
+        let rafTicking = false;
+        this.readerEl.addEventListener('scroll', () => {
+            if (rafTicking) return;
+            rafTicking = true;
+            requestAnimationFrame(() => {
+                rafTicking = false;
+                if (!app.bookId) return;
+                const readerTop = this.readerEl.getBoundingClientRect().top;
+                const domNodes = this.contentWrapper.children;
+                let topGidx = app.windowStart;
+                for (let i = 0; i < domNodes.length; i++) {
+                    if (domNodes[i].dataset.gidx === undefined) continue;
+                    if (domNodes[i].getBoundingClientRect().top - readerTop <= 100) topGidx = parseInt(domNodes[i].dataset.gidx);
+                    else break;
+                }
+                app.currentGlobalIdx = topGidx;
+                app._fillCheck();
+            });
+        }, { passive: true });
+
         // Scroll & Progress
         let scrollTimer;
         this.readerEl.addEventListener('scroll', () => {
