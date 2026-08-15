@@ -12,9 +12,18 @@
 
 <script>
   (function() {
+    var META = { default:'#F4F1EA', white:'#FFFFFF', green:'#cce8cf', dark:'#161618' };
+    // 已下线主题的回退：sepia→default（同为米色系），amoled→dark（同为黑色系）
+    var FALLBACK = { sepia: 'default', amoled: 'dark' };
     try {
-      let s = JSON.parse(localStorage.getItem('reader_settings_v2') || '{}');
-      document.documentElement.setAttribute('data-theme', s.theme || 'default');
+        var s = JSON.parse(localStorage.getItem('reader_settings_v2') || '{}');
+        var t = s.theme || 'default';
+        if (FALLBACK[t]) t = FALLBACK[t];
+        // auto 主题：跟随系统深浅色，避免首帧闪错主题
+        if (t === 'auto') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'default';
+        document.documentElement.setAttribute('data-theme', t);
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.content = META[t] || META.default;
     } catch(e) {
       document.documentElement.setAttribute('data-theme', 'default');
     }
@@ -23,14 +32,14 @@
 
 <style>
 /* --- CSS --- */
-:root { --sat: env(safe-area-inset-top); --sab: env(safe-area-inset-bottom); --header-h: 56px; --content-max-w: 720px; --bg: #F4F1EA; --text: #2D2D2D; --text-secondary: #888888; --card: rgba(255,255,255,0.5); --border: rgba(0,0,0,0.04); --accent: #9C8163; --header-bg: rgba(244, 241, 234, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
-[data-theme="default"] { --bg: #F4F1EA; --text: #2D2D2D; --text-secondary: #888888; --card: rgba(255,255,255,0.5); --border: rgba(0,0,0,0.04); --accent: #9C8163; --header-bg: rgba(244, 241, 234, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
-[data-theme="white"] { --bg: #FFFFFF; --text: #1A1A1A; --text-secondary: #666; --card: rgba(0,0,0,0.02); --border: rgba(0,0,0,0.06); --accent: #0055A4; --header-bg: rgba(255, 255, 255, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
-[data-theme="green"] { --bg: #cce8cf; --text: #2f3e2f; --text-secondary: #5c705c; --card: rgba(255,255,255,0.4); --border: rgba(0,0,0,0.05); --accent: #4a7c59; --header-bg: rgba(204, 232, 207, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
-[data-theme="sepia"] { --bg: #f4ecd8; --text: #4a4035; --text-secondary: #8a7d6b; --card: rgba(255,255,255,0.4); --border: rgba(0,0,0,0.05); --accent: #8d6e63; --header-bg: rgba(244, 236, 216, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); }
-[data-theme="dark"] { --bg: #161618; --text: #D4D4D8; --text-secondary: #71717A; --card: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.08); --accent: #D4AF37; --header-bg: rgba(22, 22, 24, 0.85); --scrollbar-thumb: rgba(255,255,255,0.15); --scrollbar-thumb-hover: rgba(255,255,255,0.3); }
+:root { --sat: env(safe-area-inset-top); --sab: env(safe-area-inset-bottom); --header-h: 56px; --content-max-w: 720px; --bg: #F4F1EA; --text: #2D2D2D; --text-secondary: #888888; --card: rgba(255,255,255,0.5); --border: rgba(0,0,0,0.04); --accent: #9C8163; --accent-strong: #7E6549; --accent-contrast: #fff; --header-bg: rgba(244, 241, 234, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); --highlight: rgba(156,129,99,0.12); --toast-bg: rgba(0,0,0,0.8); --toast-text: #fff; --toast-shadow: rgba(0,0,0,0.1); }
+[data-theme="default"] { --bg: #F4F1EA; --text: #2D2D2D; --text-secondary: #6B655B; --card: rgba(255,255,255,0.5); --border: rgba(0,0,0,0.04); --accent: #9C8163; --accent-strong: #7E6549; --accent-contrast: #fff; --header-bg: rgba(244, 241, 234, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); --highlight: rgba(156,129,99,0.12); }
+[data-theme="white"] { --bg: #FFFFFF; --text: #1A1A1A; --text-secondary: #666; --card: rgba(0,0,0,0.045); --border: rgba(0,0,0,0.08); --accent: #0055A4; --accent-strong: #0055A4; --accent-contrast: #fff; --header-bg: rgba(255, 255, 255, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); --highlight: rgba(0,85,164,0.08); }
+[data-theme="green"] { --bg: #cce8cf; --text: #2f3e2f; --text-secondary: #4A5C4A; --card: rgba(255,255,255,0.4); --border: rgba(0,0,0,0.05); --accent: #4a7c59; --accent-strong: #4a7c59; --accent-contrast: #fff; --header-bg: rgba(204, 232, 207, 0.85); --scrollbar-thumb: rgba(0,0,0,0.15); --scrollbar-thumb-hover: rgba(0,0,0,0.3); --highlight: rgba(74,124,89,0.12); }
+[data-theme="dark"] { --bg: #161618; --text: #D4D4D8; --text-secondary: #8E8E99; --card: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.08); --accent: #D4AF37; --accent-strong: #D4AF37; --accent-contrast: #221B06; --header-bg: rgba(22, 22, 24, 0.85); --scrollbar-thumb: rgba(255,255,255,0.15); --scrollbar-thumb-hover: rgba(255,255,255,0.3); --highlight: rgba(212,175,55,0.14); --toast-bg: rgba(248,248,252,0.96); --toast-text: #1A1A1A; --toast-shadow: rgba(0,0,0,0.45); }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+::selection { background: var(--highlight); }
 html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", sans-serif; transition: background .4s, color .4s; -webkit-font-smoothing: antialiased; }
 .page::-webkit-scrollbar, #drawer-toc .list::-webkit-scrollbar { width: 6px; }
 .page::-webkit-scrollbar-track, #drawer-toc .list::-webkit-scrollbar-track { background: transparent; }
@@ -39,7 +48,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .page { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; transition: opacity .3s, visibility .3s; }
 .page.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
 
-#header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: var(--header-h); display: flex; align-items: center; justify-content: center; background: var(--header-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-bottom: 1px solid var(--border); transform: translateY(-100%); transition: transform .35s cubic-bezier(.4,0,.2,1); }
+#header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: var(--header-h); display: flex; align-items: center; justify-content: center; background: var(--header-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-bottom: 1px solid var(--border); transform: translateY(-100%); transition: transform .35s cubic-bezier(.4,0,.2,1), background-color .4s, border-color .4s; }
 body.ui-visible #header { transform: translateY(0); }
 .header-inner { width: 100%; max-width: var(--content-max-w); padding: 0 20px; display: flex; align-items: center; justify-content: space-between; }
 #header .title { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; text-align: center; margin: 0 10px; letter-spacing: 0.5px; }
@@ -61,21 +70,21 @@ body.ui-visible #header { transform: translateY(0); }
 
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 200; opacity: 0; visibility: hidden; transition: all .3s; backdrop-filter: blur(4px); }
 .overlay.active { opacity: 1; visibility: visible; }
-#drawer-toc { position: fixed; top: 0; left: 0; bottom: 0; width: 85%; max-width: 340px; z-index: 210; background: var(--bg); transform: translateX(-100%); transition: transform .35s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; box-shadow: 4px 0 24px rgba(0,0,0,0.05); }
+#drawer-toc { position: fixed; top: 0; left: 0; bottom: 0; width: 85%; max-width: 340px; z-index: 210; background: var(--bg); transform: translateX(-100%); transition: transform .35s cubic-bezier(.4,0,.2,1), background-color .4s, border-color .4s; display: flex; flex-direction: column; box-shadow: 4px 0 24px rgba(0,0,0,0.05); }
 #drawer-toc.active { transform: translateX(0); }
 #drawer-toc .header { padding: 24px; border-bottom: 1px solid var(--border); font-size: 18px; font-weight: 600; padding-top: calc(24px + var(--sat)); letter-spacing: 1px; }
 #drawer-toc .list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; }
 #drawer-toc .item { padding: 14px 16px; border-radius: 8px; font-size: 15px; color: var(--text-secondary); cursor: pointer; white-space: normal; line-height: 1.5; margin-bottom: 4px; transition: all .2s; }
 #drawer-toc .item:hover { background: var(--card); color: var(--text); }
-#drawer-toc .item.active { background: var(--accent); color: #fff; font-weight: 500; box-shadow: 0 4px 12px rgba(156, 129, 99, 0.2); }
-#drawer-settings { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+#drawer-toc .item.active { background: var(--accent-strong); color: var(--accent-contrast); font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+#drawer-settings { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1), background-color .4s, border-color .4s; padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 #drawer-settings.active { transform: translateY(0); }
 .setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
 .setting-label { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
 .setting-btns { display: flex; gap: 12px; align-items: center; }
 .setting-btns button { padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 14px; cursor: pointer; transition: all .2s; }
 .setting-btns button:hover { border-color: var(--accent); }
-.setting-btns button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.setting-btns button.active { background: var(--accent-strong); color: var(--accent-contrast); border-color: var(--accent-strong); }
 .theme-dots { display: flex; gap: 16px; }
 .theme-dot { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; position: relative; transition: transform .2s; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
 .theme-dot:hover { transform: scale(1.1); }
@@ -83,8 +92,8 @@ body.ui-visible #header { transform: translateY(0); }
 .theme-dot[data-t="white"] { background: #fff; border: 1px solid #eee; }
 .theme-dot[data-t="green"] { background: #cce8cf; }
 .theme-dot[data-t="default"] { background: #F4F1EA; }
-.theme-dot[data-t="sepia"] { background: #f4ecd8; }
 .theme-dot[data-t="dark"] { background: #161618; border: 1px solid #333; }
+.theme-dot[data-t="auto"] { background: linear-gradient(135deg, #F4F1EA 49%, #161618 51%); border: 1px solid rgba(0,0,0,0.15); }
 
 /* Bookshelf UI */
 #bookshelf { padding: 24px; padding-top: calc(24px + var(--sat)); max-width: 800px; margin: 0 auto; }
@@ -93,7 +102,7 @@ body.ui-visible #header { transform: translateY(0); }
 .header-btns { display: flex; gap: 10px; }
 .btn-secondary { padding: 8px 16px; border-radius: 20px; background: var(--card); color: var(--text-secondary); border: 1px solid var(--border); font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s; }
 .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
-.btn-import { padding: 8px 18px; border-radius: 20px; background: var(--accent); color: #fff; border: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s; box-shadow: 0 4px 12px rgba(156, 129, 99, 0.15); }
+.btn-import { padding: 8px 18px; border-radius: 20px; background: var(--accent-strong); color: var(--accent-contrast); border: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s; box-shadow: 0 4px 12px rgba(156, 129, 99, 0.15); }
 .btn-import:hover { opacity: 0.9; transform: translateY(-1px); }
 
 .book-list { display: flex; flex-direction: column; gap: 16px; }
@@ -121,7 +130,7 @@ body.ui-visible #header { transform: translateY(0); }
 
 /* New: Toast Component */
 #toast-container { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 1000; pointer-events: none; display: flex; flex-direction: column; gap: 10px; }
-.toast { background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 24px; font-size: 14px; opacity: 0; transform: translateY(20px); transition: all .3s; text-align: center; max-width: 80vw; box-shadow: 0 4px 12px rgba(0,0,0,0.1); backdrop-filter: blur(4px); overflow-wrap: break-word; word-break: break-word; }
+.toast { background: var(--toast-bg); color: var(--toast-text); padding: 10px 20px; border-radius: 24px; font-size: 14px; opacity: 0; transform: translateY(20px); transition: all .3s; text-align: center; max-width: 80vw; box-shadow: 0 4px 12px var(--toast-shadow); backdrop-filter: blur(4px); overflow-wrap: break-word; word-break: break-word; }
 .toast.show { opacity: 1; transform: translateY(0); }
 
 /* Auto-scroll & TTS floating bar — 平时隐藏，仅朗读/滚动时显示 */
@@ -131,22 +140,22 @@ body.ui-visible #header { transform: translateY(0); }
 #float-bar.auto-hide { opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(20px); pointer-events: none; }
 #float-bar .fb-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; }
 #float-bar .fb-btn:hover { background: var(--border); }
-#float-bar .fb-btn.active { background: var(--accent); color: #fff; }
-#float-bar .fb-btn.play-btn { width: 48px; height: 48px; background: var(--accent); color: #fff; }
+#float-bar .fb-btn.active { background: var(--accent-strong); color: var(--accent-contrast); }
+#float-bar .fb-btn.play-btn { width: 48px; height: 48px; background: var(--accent-strong); color: var(--accent-contrast); }
 #float-bar .fb-btn.play-btn:hover { opacity: 0.85; }
 #float-bar .fb-speed { font-size: 13px; font-weight: 600; color: var(--text); min-width: 36px; text-align: center; cursor: pointer; user-select: none; }
 #float-bar .fb-divider { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
 
 /* TTS settings panel */
-#drawer-tts { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+#drawer-tts { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; background: var(--bg); border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1), background-color .4s, border-color .4s; padding: 24px; padding-bottom: calc(24px + var(--sab)); max-width: 500px; margin: 0 auto; box-shadow: 0 -4px 24px rgba(0,0,0,0.05); max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 #drawer-tts.active { transform: translateY(0); }
 .tts-voice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
 .tts-voice-btn { padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 14px; cursor: pointer; transition: all .2s; text-align: center; }
 .tts-voice-btn:hover { border-color: var(--accent); }
-.tts-voice-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tts-voice-btn.active { background: var(--accent-strong); color: var(--accent-contrast); border-color: var(--accent-strong); }
 
 /* 朗读段落高亮 */
-#content-wrapper [data-gidx].tts-reading { background: var(--card); border-radius: 8px; box-shadow: inset 3px 0 0 var(--accent); padding-left: 12px; margin-left: -12px; transition: background .3s; }
+#content-wrapper [data-gidx].tts-reading { background: var(--highlight); border-radius: 8px; box-shadow: inset 3px 0 0 var(--accent-strong); padding-left: 12px; margin-left: -12px; transition: background .3s; }
 
 @media (max-width: 600px) { 
   #content-wrapper { font-size: 16px; padding-left: 20px; padding-right: 20px; line-height: 1.8; } 
@@ -199,7 +208,7 @@ body.ui-visible #header { transform: translateY(0); }
   <div class="setting-row"><span class="setting-label">字号</span><div class="setting-btns"><button id="font-dec">A-</button><span id="font-val" style="min-width: 30px; text-align: center; font-weight: 600;">18</span><button id="font-inc">A+</button></div></div>
   <div class="setting-row"><span class="setting-label">繁简</span><div class="setting-btns"><button id="btn-t2s" style="padding: 4px 16px;">繁→简</button></div></div>
   <div class="setting-row"><span class="setting-label">行距</span><div class="setting-btns"><button data-line="1.6">紧凑</button><button data-line="1.9" class="active">适中</button><button data-line="2.2">宽松</button></div></div>
-  <div class="setting-row"><span class="setting-label">主题</span><div class="theme-dots"><div class="theme-dot" data-t="white" title="极简白"></div><div class="theme-dot" data-t="green" title="护眼绿"></div><div class="theme-dot" data-t="default" title="暖灰纸"></div><div class="theme-dot" data-t="sepia" title="羊皮纸"></div><div class="theme-dot" data-t="dark" title="深邃夜"></div></div></div>
+  <div class="setting-row"><span class="setting-label">主题</span><div class="theme-dots"><div class="theme-dot" data-t="white" title="极简白"></div><div class="theme-dot" data-t="green" title="护眼绿"></div><div class="theme-dot" data-t="default" title="暖灰纸"></div><div class="theme-dot" data-t="dark" title="深邃夜"></div><div class="theme-dot" data-t="auto" title="自动（跟随系统）"></div></div></div>
   <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 3.1</span></div>
 </div>
 
@@ -263,7 +272,7 @@ const settings = new (class SettingsManager {
 class StorageManager {
     constructor() {
         this.db = null;
-        this.version = 2;
+        this.version = 3; // v3: 新增 progress 独立 store，进度保存不再整本重写
         this.dbName = 'ReaderCache';
     }
 
@@ -274,6 +283,7 @@ class StorageManager {
             request.onupgradeneeded = (e) => {
                 const db = e.target.result;
                 if (!db.objectStoreNames.contains('books')) db.createObjectStore('books', { keyPath: 'id' });
+                if (!db.objectStoreNames.contains('progress')) db.createObjectStore('progress', { keyPath: 'id' });
             };
             request.onsuccess = (e) => { this.db = e.target.result; resolve(); };
             request.onerror = (e) => reject(e);
@@ -299,16 +309,32 @@ class StorageManager {
         });
     }
 
+    // v3: 进度写入独立的小记录，避免每次保存进度都整本重写（大书可达数 MB）
     async updateProgress(id, progressGidx) {
-        const data = await this.get(id);
-        if (data) { data.lastProgressGidx = progressGidx; await this.set(id, data); }
+        if(!this.db) await this.init();
+        return new Promise((resolve) => {
+            const tx = this.db.transaction('progress', 'readwrite');
+            tx.objectStore('progress').put({ id, progressGidx, timestamp: Date.now() });
+            tx.oncomplete = () => resolve();
+        });
+    }
+
+    async getProgress(id) {
+        if(!this.db) await this.init();
+        return new Promise((resolve) => {
+            const tx = this.db.transaction('progress', 'readonly');
+            const req = tx.objectStore('progress').get(id);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+        });
     }
 
     async delete(id) {
         if(!this.db) await this.init();
         return new Promise((resolve) => {
-            const tx = this.db.transaction('books', 'readwrite');
+            const tx = this.db.transaction(['books', 'progress'], 'readwrite');
             tx.objectStore('books').delete(id); 
+            tx.objectStore('progress').delete(id);
             tx.oncomplete = () => resolve();
         });
     }
@@ -316,8 +342,9 @@ class StorageManager {
     async clearAll() {
         if(!this.db) await this.init();
         return new Promise((resolve) => {
-            const tx = this.db.transaction('books', 'readwrite');
+            const tx = this.db.transaction(['books', 'progress'], 'readwrite');
             tx.objectStore('books').clear(); 
+            tx.objectStore('progress').clear();
             tx.oncomplete = () => resolve();
         });
     }
@@ -547,10 +574,16 @@ class ReaderApp {
             try { networkMeta = await fetch(`/api/books/${encodeURIComponent(bookId)}`).then(r=>r.json()); } 
             catch (e) { 
                 console.warn('Network fetch failed, using cached data', e);
-                return { name: cached.name, progress_gidx: cached.lastProgressGidx || 0 }; 
+                // 优先读独立的进度记录，旧数据回退到 book 记录内的字段
+                const p = await this.storage.getProgress(bookId);
+                const gidx = (p && typeof p.progressGidx === 'number') ? p.progressGidx : (cached.lastProgressGidx || 0);
+                return { name: cached.name, progress_gidx: gidx }; 
             }
             
-            const finalProgressGidx = isRecentCache ? (cached.lastProgressGidx || 0) : (networkMeta.progress_gidx || 0);
+            // 优先读独立的进度记录（v3），旧缓存回退到 book 记录内的字段
+            const localProg = await this.storage.getProgress(bookId);
+            const localGidx = (localProg && typeof localProg.progressGidx === 'number') ? localProg.progressGidx : (cached.lastProgressGidx || 0);
+            const finalProgressGidx = isRecentCache ? localGidx : (networkMeta.progress_gidx || 0);
             return {
                 name: networkMeta.name || cached.name,
                 progress_gidx: finalProgressGidx
@@ -690,19 +723,13 @@ class ReaderApp {
         this.loadingText.textContent = '正在本地解析...'; 
         this.loadingMask.classList.remove('hidden');
         
+        let bookId = null;
         try {
             const text = Utils.decodeText(await file.arrayBuffer());
             this.loadingText.textContent = '正在解析章节...';
             const parsed = await Utils.parseTextAsync(text, file.name);
             
-            const bookId = crypto.randomUUID();
-            await this.storage.set(bookId, { 
-                paragraphs: parsed.paragraphs, 
-                chMap: parsed.chMap, 
-                name: parsed.bookName, 
-                lastProgressGidx: 0, 
-                timestamp: Date.now() 
-            });
+            bookId = crypto.randomUUID();
             
             // Step 1: 流式上传文件到 R2 (raw body, 不用 FormData 避免 CPU 超限)
             this.loadingText.textContent = '正在上传文件...';
@@ -737,14 +764,26 @@ class ReaderApp {
             }
             
             const metaResult = await metaRes.json();
-            if (metaResult.success) {
-                await this.renderBookList();
-                Toast.show('导入成功');
-            } else {
+            if (!metaResult.success) {
                 throw new Error(metaResult.error || '保存元数据失败');
             }
+            // 服务端两步都成功后才写本地缓存，失败不留孤儿记录
+            await this.storage.set(bookId, { 
+                paragraphs: parsed.paragraphs, 
+                chMap: parsed.chMap, 
+                name: parsed.bookName, 
+                lastProgressGidx: 0, 
+                timestamp: Date.now() 
+            });
+            await this.renderBookList();
+            Toast.show('导入成功');
         } catch (err) { 
             console.error(err);
+            // 回滚：清理可能已产生的本地缓存与服务端残留
+            if (bookId) {
+                this.storage.delete(bookId).catch(() => {});
+                fetch(`/api/books/${encodeURIComponent(bookId)}`, { method: 'DELETE' }).catch(() => {});
+            }
             Toast.show('导入失败: ' + err.message); 
         } 
         finally { 
@@ -882,6 +921,10 @@ class UIController {
         this.readerEl = document.getElementById('reader');
         this.contentWrapper = document.getElementById('content-wrapper');
         this.saveTimer = null;
+        // 主题 → 手机状态栏颜色映射（随主题切换同步）
+        this.THEME_META = { default:'#F4F1EA', white:'#FFFFFF', green:'#cce8cf', dark:'#161618' };
+        // 已下线主题的回退映射
+        this.THEME_FALLBACK = { sepia: 'default', amoled: 'dark' };
     }
 
     init() {
@@ -937,28 +980,37 @@ class UIController {
             }, 60);
         }, { passive: true });
 
-        // 进度条拖拽跳转
+        // 进度条拖拽跳转：拖动时仅移动滑块预览，松手才 teleport 一次，
+        // 避免拖动过程中每个 move 事件都全量重建 DOM
         const progressBar = document.getElementById('progress-bar');
+        const progressThumb = document.getElementById('progress-thumb');
         let isDragging = false;
-        const jumpToProgress = (clientY) => {
+        let pendingGidx = null;
+        const previewThumb = (clientY) => {
             const rect = progressBar.getBoundingClientRect();
             const ratio = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
-            const targetGidx = Math.floor(ratio * (app.totalParagraphs - 1));
-            app.teleportTo(targetGidx);
+            pendingGidx = Math.floor(ratio * Math.max(0, app.totalParagraphs - 1));
+            progressThumb.style.top = (ratio * Math.max(0, progressBar.clientHeight - 40)) + 'px';
+        };
+        const commitDrag = () => {
+            if (pendingGidx !== null) app.teleportTo(pendingGidx);
+            pendingGidx = null;
         };
         progressBar.addEventListener('touchstart', (e) => {
             isDragging = true;
             progressBar.classList.add('draggable');
-            jumpToProgress(e.touches[0].clientY);
+            previewThumb(e.touches[0].clientY);
             e.preventDefault();
         }, { passive: false });
         progressBar.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
-            jumpToProgress(e.touches[0].clientY);
+            previewThumb(e.touches[0].clientY);
             e.preventDefault();
         }, { passive: false });
         progressBar.addEventListener('touchend', () => {
+            if (!isDragging) return;
             isDragging = false;
+            commitDrag();
             progressBar.classList.remove('draggable');
             // 拖拽结束后重新启动自动隐藏
             this._progressHideTimer = setTimeout(() => {
@@ -968,22 +1020,22 @@ class UIController {
         progressBar.addEventListener('mousedown', (e) => {
             isDragging = true;
             progressBar.classList.add('draggable');
-            jumpToProgress(e.clientY);
+            previewThumb(e.clientY);
             e.preventDefault();
         });
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            jumpToProgress(e.clientY);
+            previewThumb(e.clientY);
         });
         document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                progressBar.classList.remove('draggable');
-                // 拖拽结束后重新启动自动隐藏
-                this._progressHideTimer = setTimeout(() => {
-                    progressBar.classList.remove('visible');
-                }, 2000);
-            }
+            if (!isDragging) return;
+            isDragging = false;
+            commitDrag();
+            progressBar.classList.remove('draggable');
+            // 拖拽结束后重新启动自动隐藏
+            this._progressHideTimer = setTimeout(() => {
+                progressBar.classList.remove('visible');
+            }, 2000);
         });
 
         // Touch to toggle menu
@@ -1056,21 +1108,39 @@ class UIController {
                 autoScroll.stop();
             }
         });
+
+        // 自动主题：系统深浅色变化时实时跟随
+        this._darkMQ = matchMedia('(prefers-color-scheme: dark)');
+        this._darkMQ.addEventListener('change', () => {
+            if (settings.get('theme') === 'auto') this.applySettings();
+        });
     }
 
     applySettings() {
-        document.body.dataset.theme = settings.get('theme');
+        let raw = settings.get('theme') || 'default';
+        // 已下线主题回退（sepia→default，amoled→dark），老用户设置自动迁移
+        if (this.THEME_FALLBACK[raw]) raw = this.THEME_FALLBACK[raw];
+        // auto 主题：解析为系统当前深浅色
+        const resolved = raw === 'auto'
+            ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default')
+            : raw;
+        // 统一写 <html>（与启动脚本一致），body 同步保留，消除双轨不一致
+        document.documentElement.dataset.theme = resolved;
+        document.body.dataset.theme = resolved;
+        // 同步手机状态栏颜色
+        const metaEl = document.querySelector('meta[name="theme-color"]');
+        if (metaEl) metaEl.content = this.THEME_META[resolved] || this.THEME_META.default;
         if (this.contentWrapper) {
             this.contentWrapper.style.fontSize = settings.get('fontSize') + 'px'; 
             this.contentWrapper.style.lineHeight = settings.get('lineHeight');
         }
         const fontVal = document.getElementById('font-val');
         if (fontVal) fontVal.textContent = settings.get('fontSize');
-        document.querySelectorAll('.theme-dot').forEach(el => el.classList.toggle('active', el.dataset.t === settings.get('theme')));
+        document.querySelectorAll('.theme-dot').forEach(el => el.classList.toggle('active', el.dataset.t === raw));
         document.querySelectorAll('[data-line]').forEach(el => el.classList.toggle('active', parseFloat(el.dataset.line) === settings.get('lineHeight')));
         
         const btn = document.getElementById('btn-night-mode');
-        const isDark = settings.get('theme') === 'dark';
+        const isDark = resolved === 'dark';
         if (btn) {
             btn.innerHTML = isDark 
                 ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
@@ -1112,11 +1182,19 @@ class UIController {
     }
 
     toggleTheme() {
-        const isDark = settings.get('theme') === 'dark';
-        if (isDark) {
-            settings.set('theme', settings.get('previousTheme') || 'default');
+        let raw = settings.get('theme') || 'default';
+        if (this.THEME_FALLBACK[raw]) raw = this.THEME_FALLBACK[raw];
+        const resolved = raw === 'auto'
+            ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default')
+            : raw;
+        if (resolved === 'dark') {
+            // 从暗色切回亮色：previousTheme 若也是暗色则回退到默认暖色
+            let prev = settings.get('previousTheme') || 'default';
+            if (this.THEME_FALLBACK[prev]) prev = this.THEME_FALLBACK[prev];
+            if (prev === 'dark') prev = 'default';
+            settings.set('theme', prev);
         } else {
-            settings.set('previousTheme', settings.get('theme'));
+            settings.set('previousTheme', raw);
             settings.set('theme', 'dark');
         }
         this.applySettings();
@@ -1422,7 +1500,9 @@ class TTSController {
             console.error('TTS audio error', e);
             this.loading = false;
             Toast.show('播放出错，跳过');
-            setTimeout(() => this.playNext(), 500);
+            // 记录 token：500ms 后若已被 stop()（token 变化）则不再推进
+            const myToken = this._genToken;
+            setTimeout(() => { if (myToken === this._genToken) this.playNext(); }, 500);
         });
     }
 
@@ -1524,7 +1604,7 @@ class TTSController {
             if (myToken !== this._genToken) return; // 已被 stop
             console.error('TTS error:', e);
             this.loading = false;
-            Toast.show('语音合成失败: ' + e.message);
+            Toast.show('语音合成失败: ' + (e && e.name === 'TimeoutError' ? '请求超时' : e.message));
             this.playing = false;
             this.updatePlayButton();
         }
@@ -1569,6 +1649,7 @@ class TTSController {
         const res = await fetch(url, {
             method: 'POST',
             headers,
+            signal: AbortSignal.timeout(30000),
             body: JSON.stringify({
                 model: 'tts-1',
                 input: text.slice(0, 2000),
@@ -1600,6 +1681,7 @@ class TTSController {
         const res = await fetch('/api/tts-proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(30000),
             body: JSON.stringify(proxyBody)
         });
         if (!res.ok) {
