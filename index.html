@@ -138,11 +138,11 @@ body.ui-visible #header { transform: translateY(0); }
 #float-bar.visible { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
 /* 朗读中自动隐藏，3秒无操作淡出，点击屏幕重新显示 */
 #float-bar.auto-hide { opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(20px); pointer-events: none; }
-#float-bar .fb-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .25s cubic-bezier(.4,0,.2,1); flex-shrink: 0; }
+#float-bar .fb-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .25s cubic-bezier(.4,0,.2,1); flex-shrink: 0; }
 #float-bar .fb-btn:hover { background: var(--border); }
 #float-bar .fb-btn.active { background: var(--accent-strong); color: var(--accent-contrast); }
 /* 播放按钮 — 突破胶囊边界，放大圆叠加在胶囊之上 */
-#float-bar .fb-btn.play-btn { width: 60px; height: 60px; margin-top: -15px; margin-bottom: -10px; background: var(--accent-strong); color: var(--accent-contrast); box-shadow: 0 0 0 4px var(--header-bg), 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px var(--border); transition: all .3s cubic-bezier(.4,0,.2,1); }
+#float-bar .fb-btn.play-btn { width: 60px; height: 60px; margin-top: -10px; margin-bottom: -10px; background: var(--accent-strong); color: var(--accent-contrast); box-shadow: 0 0 0 4px var(--header-bg), 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px var(--border); transition: all .3s cubic-bezier(.4,0,.2,1); }
 #float-bar .fb-btn.play-btn:hover { transform: scale(1.08); box-shadow: 0 0 0 4px var(--header-bg), 0 6px 28px rgba(0,0,0,0.22), 0 0 0 1px var(--border); }
 #float-bar .fb-btn.play-btn.active { background: var(--accent-strong); color: var(--accent-contrast); }
 #float-bar .fb-speed { font-size: 13px; font-weight: 600; color: var(--text); min-width: 36px; text-align: center; cursor: pointer; user-select: none; }
@@ -395,8 +395,10 @@ class Utils {
                 { source: "^(?:chapter|part|book|volume|vol\\.?)\\s+(?:\\d+|[IVXLCDM]+|[A-Za-z]+)(?:\\s*(?:[:：\\-—]|\\s)\\s*[^\\r\\n]{0,40})?$", flags: "i", weight: 60 },
                 // 4. 括号包装章节（强制成对括号）：【第一章】、《终章》……
                 { source: "^[\\[【〖《〔〈『「]\\s*(?:(?:第\\s*(?:\\d+|[０-９]+|[零〇○一二三四五六七八九十百千万两壹贰叁肆伍陆柒捌玖拾佰仟]+)\\s*(?:章|节|回|卷|部|篇|集|季))|(?:序章|序言|楔子|引子|前言|正文|尾声|终章|终幕|大结局|后记|番外(?:篇)?|外传|卷首|卷末|完本感言))[^\\r\\n]{0,30}\\s*[\\]】〗》〕〉』」]$", flags: "i", weight: 55 },
-                // 5. 纯数字章节（最低优先级，弱信号）：001、002 惊变……
-                { source: "^(?:\\s{0,4})\\d{1,4}(?:[.．、])?(?:\\s+[^\\r\\n]{0,30})?$", flags: "i", weight: 40 }
+                // 5. 数字编号章节（弱信号）：1、神秘标签、12.大决战、3．夜幕——数字+顿号/点+短标题
+                { source: "^(?:\\s{0,4})\\d{1,4}[、.．][^\\r\\n]{1,20}$", flags: "i", weight: 50, weak: true },
+                // 6. 纯数字章节（最低优先级，弱信号）：001、002 惊变……
+                { source: "^(?:\\s{0,4})\\d{1,4}(?:[.．、])?(?:\\s+[^\\r\\n]{0,30})?$", flags: "i", weight: 40, weak: true }
             ];
 
             const workerScript = `
@@ -412,13 +414,13 @@ class Utils {
                     const { text, fileName, patterns } = e.data;
                     try {
                         const CHAPTER_REGEXES = patterns.map(function(item) {
-                            return { regex: new RegExp(item.source, item.flags), weight: item.weight };
+                            return { regex: new RegExp(item.source, item.flags), weight: item.weight, weak: !!item.weak };
                         });
 
                         function matchChapter(line) {
                             for (let j = 0; j < CHAPTER_REGEXES.length; j++) {
                                 const m = line.match(CHAPTER_REGEXES[j].regex);
-                                if (m) return { match: m, weight: CHAPTER_REGEXES[j].weight };
+                                if (m) return { match: m, weight: CHAPTER_REGEXES[j].weight, weak: CHAPTER_REGEXES[j].weak };
                             }
                             return null;
                         }
@@ -450,11 +452,23 @@ class Utils {
 
                                 if (nextLine && matchChapter(nextLine)) score -= 40;
 
+                                // 弱信号附加守卫：跳过空行找下一个非空行，若也是章节格式则视为编号列表（作者感言/情报罗列），扣分
+                                if (result.weak) {
+                                    let k = i + 1;
+                                    while (k < lines.length && !lines[k].trim()) k++;
+                                    if (k < lines.length && matchChapter(lines[k].trim())) score -= 40;
+                                }
+
                                 if (trimmed.length <= 25) score += 10;
                                 else if (trimmed.length > 45) score -= 20;
 
                                 // 仅以句号结尾判为正文（省略号/问号/感叹号常见于标题故保留）
                                 if (/。$/.test(trimmed)) {
+                                    score = 0;
+                                }
+
+                                // 弱信号额外守卫：以省略号结尾的行多为正文列举/未尽语气（真标题几乎不以省略号收尾）
+                                if (result.weak && /(?:…|[.]{3})$/.test(trimmed)) {
                                     score = 0;
                                 }
 
