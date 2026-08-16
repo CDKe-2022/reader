@@ -138,11 +138,11 @@ body.ui-visible #header { transform: translateY(0); }
 #float-bar.visible { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
 /* 朗读中自动隐藏，3秒无操作淡出，点击屏幕重新显示 */
 #float-bar.auto-hide { opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(20px); pointer-events: none; }
-#float-bar .fb-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .25s cubic-bezier(.4,0,.2,1); flex-shrink: 0; }
+#float-bar .fb-btn { width: 35px; height: 35px; border-radius: 50%; border: none; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .25s cubic-bezier(.4,0,.2,1); flex-shrink: 0; }
 #float-bar .fb-btn:hover { background: var(--border); }
 #float-bar .fb-btn.active { background: var(--accent-strong); color: var(--accent-contrast); }
 /* 播放按钮 — 突破胶囊边界，放大圆叠加在胶囊之上 */
-#float-bar .fb-btn.play-btn { width: 60px; height: 60px; margin-top: -10px; margin-bottom: -10px; background: var(--accent-strong); color: var(--accent-contrast); box-shadow: 0 0 0 4px var(--header-bg), 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px var(--border); transition: all .3s cubic-bezier(.4,0,.2,1); }
+#float-bar .fb-btn.play-btn { width: 60px; height: 60px; margin-top: -15px; margin-bottom: -10px; background: var(--accent-strong); color: var(--accent-contrast); box-shadow: 0 0 0 4px var(--header-bg), 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px var(--border); transition: all .3s cubic-bezier(.4,0,.2,1); }
 #float-bar .fb-btn.play-btn:hover { transform: scale(1.08); box-shadow: 0 0 0 4px var(--header-bg), 0 6px 28px rgba(0,0,0,0.22), 0 0 0 1px var(--border); }
 #float-bar .fb-btn.play-btn.active { background: var(--accent-strong); color: var(--accent-contrast); }
 #float-bar .fb-speed { font-size: 13px; font-weight: 600; color: var(--text); min-width: 36px; text-align: center; cursor: pointer; user-select: none; }
