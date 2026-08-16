@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>极简阅读器 3.1</title>
+<title>极简阅读器 3.2</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#F4F1EA">
@@ -134,15 +134,17 @@ body.ui-visible #header { transform: translateY(0); }
 .toast.show { opacity: 1; transform: translateY(0); }
 
 /* Auto-scroll & TTS floating bar — 平时隐藏，仅朗读/滚动时显示 */
-#float-bar { position: fixed; bottom: calc(16px + var(--sab)); left: 50%; z-index: 95; display: flex; align-items: center; gap: 8px; background: var(--header-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--border); border-radius: 28px; padding: 8px 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(20px); transition: all .35s cubic-bezier(.4,0,.2,1); max-width: 92vw; }
+#float-bar { position: fixed; bottom: calc(16px + var(--sab)); left: 50%; z-index: 95; display: flex; align-items: center; gap: 6px; background: var(--header-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--border); border-radius: 28px; padding: 8px 14px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(20px); transition: all .35s cubic-bezier(.4,0,.2,1); max-width: 92vw; overflow: visible; }
 #float-bar.visible { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
 /* 朗读中自动隐藏，3秒无操作淡出，点击屏幕重新显示 */
 #float-bar.auto-hide { opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(20px); pointer-events: none; }
-#float-bar .fb-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; }
+#float-bar .fb-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .25s cubic-bezier(.4,0,.2,1); flex-shrink: 0; }
 #float-bar .fb-btn:hover { background: var(--border); }
 #float-bar .fb-btn.active { background: var(--accent-strong); color: var(--accent-contrast); }
-#float-bar .fb-btn.play-btn { width: 48px; height: 48px; background: var(--accent-strong); color: var(--accent-contrast); }
-#float-bar .fb-btn.play-btn:hover { opacity: 0.85; }
+/* 播放按钮 — 突破胶囊边界，放大圆叠加在胶囊之上 */
+#float-bar .fb-btn.play-btn { width: 60px; height: 60px; margin-top: -10px; margin-bottom: -10px; background: var(--accent-strong); color: var(--accent-contrast); box-shadow: 0 0 0 4px var(--header-bg), 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px var(--border); transition: all .3s cubic-bezier(.4,0,.2,1); }
+#float-bar .fb-btn.play-btn:hover { transform: scale(1.08); box-shadow: 0 0 0 4px var(--header-bg), 0 6px 28px rgba(0,0,0,0.22), 0 0 0 1px var(--border); }
+#float-bar .fb-btn.play-btn.active { background: var(--accent-strong); color: var(--accent-contrast); }
 #float-bar .fb-speed { font-size: 13px; font-weight: 600; color: var(--text); min-width: 36px; text-align: center; cursor: pointer; user-select: none; }
 #float-bar .fb-divider { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
 
@@ -209,7 +211,7 @@ body.ui-visible #header { transform: translateY(0); }
   <div class="setting-row"><span class="setting-label">繁简</span><div class="setting-btns"><button id="btn-t2s" style="padding: 4px 16px;">繁→简</button></div></div>
   <div class="setting-row"><span class="setting-label">行距</span><div class="setting-btns"><button data-line="1.6">紧凑</button><button data-line="1.9" class="active">适中</button><button data-line="2.2">宽松</button></div></div>
   <div class="setting-row"><span class="setting-label">主题</span><div class="theme-dots"><div class="theme-dot" data-t="white" title="极简白"></div><div class="theme-dot" data-t="green" title="护眼绿"></div><div class="theme-dot" data-t="default" title="暖灰纸"></div><div class="theme-dot" data-t="dark" title="深邃夜"></div><div class="theme-dot" data-t="auto" title="自动（跟随系统）"></div></div></div>
-  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 3.1</span></div>
+  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;">极简阅读器 3.2</span></div>
 </div>
 
 <!-- Auto-scroll & TTS floating bar -->
@@ -1106,6 +1108,18 @@ class UIController {
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && autoScroll.scrolling) {
                 autoScroll.stop();
+            }
+        });
+
+        // 键盘方向键滚动：↑↓ 200px，←→ 600px（仅在阅读页面可见时生效）
+        document.addEventListener('keydown', (e) => {
+            const reader = document.getElementById('reader');
+            if (reader.classList.contains('hidden')) return;
+            const KEY_SCROLL = { ArrowUp: -200, ArrowDown: 200, ArrowLeft: -600, ArrowRight: 600 };
+            const delta = KEY_SCROLL[e.key];
+            if (delta) {
+                e.preventDefault();
+                reader.scrollBy({ top: delta, behavior: 'smooth' });
             }
         });
 
