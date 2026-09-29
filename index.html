@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-page-node-id="eLxIAwZqF3Dj4jHk3yrQEP">
-<head data-page-node-id="lmezdu5XfYcCmPJVCU7TNz">
-<meta charset="UTF-8" data-page-node-id="RZwjzqCS3BrVCO48eXyIDx">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" data-page-node-id="vfyvBnMjDvVZmsPUlX89CN">
+<html lang="zh-CN" data-page-node-id="M46JWDqyl6j6y0qBwGFWMX">
+<head data-page-node-id="oACAFJcDvWzWB6RZ3G2bZ2">
+<meta charset="UTF-8" data-page-node-id="FfHvB6QBuGef3oyCZaHZhH">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" data-page-node-id="ql6eLg9x6lmLmVcSQJq4nw">
 <title>极简阅读器 3.2</title>
-<meta name="apple-mobile-web-app-capable" content="yes" data-page-node-id="IPx1lx5fHHmjrhWmq5KBZP">
-<meta name="apple-mobile-web-app-status-bar-style" content="default" data-page-node-id="D6qynT7C8BQSCiyiloGg2x">
-<meta name="theme-color" content="#F4F1EA" data-page-node-id="IoOVz2K6DVoZwS5nsoDBtd">
-<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/CDKe-2022/reader/refs/heads/main/icon-192.png" data-page-node-id="09MJ2Ahr1oqKMFJpui8B1t">
-<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/CDKe-2022/reader/refs/heads/main/icon-512.png" data-page-node-id="pzbpA46mi1TFXfqrNEIr9A">
+<meta name="apple-mobile-web-app-capable" content="yes" data-page-node-id="kj0xCYfrldPyOeft1gKwTZ">
+<meta name="apple-mobile-web-app-status-bar-style" content="default" data-page-node-id="SbvZ26FPS1FaaIfA9sui9D">
+<meta name="theme-color" content="#F4F1EA" data-page-node-id="yz5v61i0hoy9hgOD41hN7m">
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/CDKe-2022/reader/refs/heads/main/icon-192.png" data-page-node-id="7GHAFzmpwzIJ6i2t2GqCFb">
+<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/CDKe-2022/reader/refs/heads/main/icon-512.png" data-page-node-id="J3bDAW9Ny6HQFGM0lEDek1">
 
 <script>
   (function() {
@@ -167,79 +167,79 @@ body.ui-visible #header { transform: translateY(0); }
 }
 </style>
 </head>
-<body data-page-node-id="N8fIcd9hmVdhRZLrC5TZN0">
+<body data-page-node-id="5QmU1ihtKh57wrGH2eVu8Q">
 
-<div id="loading-mask" class="hidden" data-page-node-id="M4CDCkzSI8isG0AHSJ4sZQ"><div class="loading-spinner" data-page-node-id="AMww78CQJyNfaiOPj0IarK"></div><div id="loading-text" data-page-node-id="e0CEtvLvZccJMB1p0ePRtm">加载中...</div></div>
-<div id="toast-container" data-page-node-id="4uejLMCEZy43t0zrCtunns"></div>
+<div id="loading-mask" class="hidden" data-page-node-id="aJlNVKJxTlqx1VUCkzH0Ji"><div class="loading-spinner" data-page-node-id="D5agHWgSZlVPgLxEOxLWQ0"></div><div id="loading-text" data-page-node-id="pGuLA4WAZbZoFI8AzSrro3">加载中...</div></div>
+<div id="toast-container" data-page-node-id="pcqYcUFpEXL36926JF0fb5"></div>
 
-<div id="bookshelf" class="page" data-page-node-id="IM9bEkcmXBkhepFe1FjOTx">
-  <div class="shelf-header" data-page-node-id="vXyMQEy0g5Dtjfv0xEwuMc">
-    <h1 data-page-node-id="t7O2d5P0LQ2ddnD3Hi45Ha">书架</h1>
-    <div class="header-btns" data-page-node-id="2qq5TrIlTTkHvPld7rRkmj">
-      <button id="shelf-theme-btn" class="btn-secondary" title="切换主题" style="padding: 8px 10px; display: flex; align-items: center; justify-content: center;" data-page-node-id="BiMP0yKSQmAcQKYHYwbITc">
-        <svg id="shelf-theme-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="0IYjbrdfTelYSAs3IFOCF2"><circle cx="12" cy="12" r="5" data-page-node-id="DqaBPQnxzCREh7UmVhdhPK"/><line x1="12" y1="1" x2="12" y2="3" data-page-node-id="GAm6JlwuGh9FQyftnFkZT8"/><line x1="12" y1="21" x2="12" y2="23" data-page-node-id="ArjiEE9Hba0KZhlp8mVnmU"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" data-page-node-id="XqF9PDzKJcvtXKCUX8gW7R"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" data-page-node-id="wPIH8PoVbr1ajcLJm0bsXt"/><line x1="1" y1="12" x2="3" y2="12" data-page-node-id="XB2toBGONbLXnBW6Ai5eY0"/><line x1="21" y1="12" x2="23" y2="12" data-page-node-id="OD3tdHruqDEQK3GrazXGpw"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" data-page-node-id="LmTD4PhDEdE69xz5CeXwpv"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" data-page-node-id="L6dBICmEO5hqimECqg2qF4"/></svg>
-        <svg id="shelf-theme-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;" data-page-node-id="IHa8Rsz971IwXYquMwYynZ"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" data-page-node-id="3QRjkGJOaxEuFNoyYtXQoE"/></svg>
+<div id="bookshelf" class="page" data-page-node-id="Yc7vUKCaY4ONTpAx7NXl0L">
+  <div class="shelf-header" data-page-node-id="bZOT1moCpGmHtFzDxfgt3j">
+    <h1 data-page-node-id="AzLNWeBwoDR07Nvfsux6Nx">书架</h1>
+    <div class="header-btns" data-page-node-id="EZzv30DKosshNsXta4ycUo">
+      <button id="shelf-theme-btn" class="btn-secondary" title="切换主题" style="padding: 8px 10px; display: flex; align-items: center; justify-content: center;" data-page-node-id="mCcRIhmdBbqkeM4Nb8rgTm">
+        <svg id="shelf-theme-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="AMKF8lSDMFlmgH8IBvTziu"><circle cx="12" cy="12" r="5" data-page-node-id="zBVmVXhTBvWtbTix0lZqQw"/><line x1="12" y1="1" x2="12" y2="3" data-page-node-id="U252EXJ9XB2C6UtkO2qUIB"/><line x1="12" y1="21" x2="12" y2="23" data-page-node-id="9ASGtZT3HJgPHwQ9EtmKcS"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" data-page-node-id="Lu2effv4kUAg1WHplDYhCi"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" data-page-node-id="WSLTNeIXX1WQrcKDXIWalT"/><line x1="1" y1="12" x2="3" y2="12" data-page-node-id="yOtgqhorCfHrHA4Y1eqiIh"/><line x1="21" y1="12" x2="23" y2="12" data-page-node-id="Se8yyBY9yjYAQcS0JYU91p"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" data-page-node-id="a2Dme7t7mlObroVvrtnyaO"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" data-page-node-id="q4YKk0OEHfjOlvOHyKV63f"/></svg>
+        <svg id="shelf-theme-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;" data-page-node-id="CwWdpTYJhTKYLRPFaFFqkr"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" data-page-node-id="707hPkTrpnphuriRlPH0Go"/></svg>
       </button>
-      <button id="clear-cache-btn" class="btn-secondary" data-page-node-id="txudIXIs3fnEUc6PdJwgvG">清理缓存</button>
-      <button id="import-btn" class="btn-import" data-page-node-id="6I9F2GyqnHeWtJDDaqJPvE">+ 导入</button>
+      <button id="clear-cache-btn" class="btn-secondary" data-page-node-id="pe8DRG16BnDqp22s0Q5XAV">清理缓存</button>
+      <button id="import-btn" class="btn-import" data-page-node-id="31aSjlMc0rRZ5Hv3VAEvbN">+ 导入</button>
     </div>
   </div>
-  <input type="file" id="file-input" accept=".txt,.TXT,text/plain" hidden data-page-node-id="RO0aX6HCcYmER1SDYeCbHQ">
-  <div class="book-list" id="book-list" data-page-node-id="qkDIsGXZPD3heykPH2eL7P"></div>
+  <input type="file" id="file-input" accept=".txt,.TXT,text/plain" hidden data-page-node-id="FuGsUePSPFGYQqi006F9Q0">
+  <div class="book-list" id="book-list" data-page-node-id="8UD2prsXY9ctG5IJCIHPav"></div>
 </div>
 
-<div id="reader" class="page hidden" data-page-node-id="uSkEEAeTVEH07h2hywed9O">
-  <header id="header" data-page-node-id="2U0TEfsqLvzoZmRGbGeZz6">
-    <div class="header-inner" data-page-node-id="cbwiJ71DJfsznOpjc7JwBt">
-      <button class="icon-btn" id="btn-back" title="返回" data-page-node-id="7m44r4ykHsB3dkxnrQoplN"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="Aa1P8rBYuXyyIpX0L30zYH"><polyline points="15 18 9 12 15 6" data-page-node-id="AlQKF8ZBYYLF02lEoU5sgK"></polyline></svg></button>
-      <div class="title" id="header-title" data-page-node-id="e6qjIDN9zdTFIsVfvBB7eN">准备中...</div>
-      <div class="header-actions" data-page-node-id="c9VwxYDNHL5a1AsfWTtxYd">
-        <button class="icon-btn" id="btn-night-mode" title="夜间模式" data-page-node-id="derV9T8I6j2x5oxLzsbf4v"></button>
-        <button class="icon-btn" id="btn-settings" title="设置" style="font-size: 15px; font-weight: 600; font-family: serif;" data-page-node-id="A8zo6whbJ0cb3r6hq1KLby">Aa</button>
-        <button class="icon-btn" id="btn-toc" title="目录" data-page-node-id="6AApPC6ix93qGref2D3P59"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="umkXfbKuojabl1iAgnsJ4G"><line x1="3" y1="12" x2="21" y2="12" data-page-node-id="VujesnmKkm7FgfecYyjMf8"></line><line x1="3" y1="6" x2="21" y2="6" data-page-node-id="FtN0uQWRStx9CX3vXe02ct"></line><line x1="3" y1="18" x2="21" y2="18" data-page-node-id="k3hE5qE8FaMNF8shqC2dep"></line></svg></button>
+<div id="reader" class="page hidden" data-page-node-id="CyHwekrV6TRBKhHleV5olB">
+  <header id="header" data-page-node-id="fOKMnrPsNRjJqNfVUmTRYc">
+    <div class="header-inner" data-page-node-id="Vpbu2qf4fudPbHufrg7TAp">
+      <button class="icon-btn" id="btn-back" title="返回" data-page-node-id="jWO4fHVD7aqljFP0nNxore"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="1u2vUlvUk79L8b2AoSocpJ"><polyline points="15 18 9 12 15 6" data-page-node-id="0dPl5D41XpRfo7uqGyscCe"></polyline></svg></button>
+      <div class="title" id="header-title" data-page-node-id="ejnMTEyV0KJjfwUcP4guNP">准备中...</div>
+      <div class="header-actions" data-page-node-id="GC8DfwjjV4tnv3srIEZF3v">
+        <button class="icon-btn" id="btn-night-mode" title="夜间模式" data-page-node-id="a48rQoL0AuWPJYKVUvLyBC"></button>
+        <button class="icon-btn" id="btn-settings" title="设置" style="font-size: 15px; font-weight: 600; font-family: serif;" data-page-node-id="gOst3gskhMYhqq5c1sjp5d">Aa</button>
+        <button class="icon-btn" id="btn-toc" title="目录" data-page-node-id="wmFQULUP3BXsbEAF4bg4TO"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="Tq78UyxQvBaGe0l7w12J6I"><line x1="3" y1="12" x2="21" y2="12" data-page-node-id="bc12LdsbhKPHVkLigrchQd"></line><line x1="3" y1="6" x2="21" y2="6" data-page-node-id="8lHKJajmtJyFgo1t9DY6Wg"></line><line x1="3" y1="18" x2="21" y2="18" data-page-node-id="Hl6st3rgh3OXGYXYHYQPln"></line></svg></button>
       </div>
     </div>
   </header>
-  <main id="content-wrapper" data-page-node-id="pzs4KyOX3V3jCRhmjuWAlq"></main>
-  <div id="progress-bar" data-page-node-id="uB6FC0miiOQoczyzZcu4SC"><div id="progress-thumb" data-page-node-id="osSy01itTCiQSO9Ox2dzqR"></div></div>
+  <main id="content-wrapper" data-page-node-id="emtsiKiEUVY4sBlTS27C6A"></main>
+  <div id="progress-bar" data-page-node-id="lMhDLWNwPYfhD2xu2K3Uc7"><div id="progress-thumb" data-page-node-id="NxIADi79APisWyd7UqZPOp"></div></div>
 </div>
 
-<div class="overlay" id="overlay" data-page-node-id="G8hOmYuINipSe3rBpE3ef3"></div>
-<aside id="drawer-toc" data-page-node-id="fvfYKkTSHmejzbjaaXYqto"><div class="header" data-page-node-id="LxLSL2msi2yUnOOP3p8QOP">目录</div><div class="list" id="toc-list" data-page-node-id="95B0OH8J0SoYskjYRFQENZ"></div></aside>
-<div id="drawer-settings" data-page-node-id="33BzHU4tjO9FNhJwMKjt2O">
-  <div class="setting-row" data-page-node-id="01ysox0Zdl3nXwm9O9ZuO7"><span class="setting-label" data-page-node-id="ZaG9wUNYhxadNz6eVCUQ6W">字号</span><div class="setting-btns" data-page-node-id="E2YAjJD7VNJcdhSxB1QkQ4"><button id="font-dec" data-page-node-id="RGautu10Mc4ROPrV3uH53o">A-</button><span id="font-val" style="min-width: 30px; text-align: center; font-weight: 600;" data-page-node-id="8C77OMe8HIPCqqXKtkcHKH">18</span><button id="font-inc" data-page-node-id="MI02hjhyG73iqPTLZjvjSb">A+</button></div></div>
-  <div class="setting-row" data-page-node-id="yvOkZrdVE422ZuGGiXwikl"><span class="setting-label" data-page-node-id="i9lye6x3WqLGr1WfGKvTEa">繁简</span><div class="setting-btns" data-page-node-id="vsaYcl8PiwZIMqBqLDi9xt"><button id="btn-t2s" style="padding: 4px 16px;" data-page-node-id="w3nEN3Qtek4oNYwpZsfffb">繁→简</button></div></div>
-  <div class="setting-row" data-page-node-id="Gn5MVG5H3g4GWHSoHY0PyS"><span class="setting-label" data-page-node-id="ssJTW9jfBF0S76ry1P5Dvl">行距</span><div class="setting-btns" data-page-node-id="CVJIFGC18uEu6jeBN19lxF"><button data-line="1.6" data-page-node-id="aHBrE56QQekxuIh1V7d77W">紧凑</button><button data-line="1.9" class="active" data-page-node-id="MKNk1rxU7iYB3u2lZVCwSC">适中</button><button data-line="2.2" data-page-node-id="yszQga3q8tXd6EdVQbMB41">宽松</button></div></div>
-  <div class="setting-row" data-page-node-id="J2WWABfkFM1dj6y7QFAMlK"><span class="setting-label" data-page-node-id="c0QHlgbISDJXeqq5p1Bn51">主题</span><div class="theme-dots" data-page-node-id="OXxkJMGo5C4T8VC3Zhb20f"><div class="theme-dot" data-t="white" title="极简白" data-page-node-id="yya6MvEsoayVJsmCt94zcT"></div><div class="theme-dot" data-t="green" title="护眼绿" data-page-node-id="myqUzOuvA8WulIL4ximtUJ"></div><div class="theme-dot" data-t="default" title="暖灰纸" data-page-node-id="CObvIzZhgoroGlJTBquljG"></div><div class="theme-dot" data-t="dark" title="深邃夜" data-page-node-id="CUfGisHA3LO9tvQl5CNRoV"></div><div class="theme-dot" data-t="auto" title="自动（跟随系统）" data-page-node-id="5wBXdl0sbhYBTNVGfcqs7v"></div></div></div>
-  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;" data-page-node-id="dttL2lSVsuxKst5uIBpdWp"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;" data-page-node-id="2MDEeC3Ikm7ZmKkAH4RIo9">极简阅读器 3.2</span></div>
+<div class="overlay" id="overlay" data-page-node-id="B639EcMz4Kqz4c1QcOqcOJ"></div>
+<aside id="drawer-toc" data-page-node-id="rlapIxjLNHVjelYKafXK83"><div class="header" data-page-node-id="Rr2di2GzChcVrojhg8scDO">目录</div><div class="list" id="toc-list" data-page-node-id="uFvzJF5gUFo8Y3XRoKEXH1"></div></aside>
+<div id="drawer-settings" data-page-node-id="KBQKSVrC8RqI7kgeHFjQoO">
+  <div class="setting-row" data-page-node-id="GA1hEEDPIHWDuqcHgSUX5G"><span class="setting-label" data-page-node-id="JHS2QzatDPya4VH6NsEwm3">字号</span><div class="setting-btns" data-page-node-id="3raCqnWZiWK7zYe07n7MNz"><button id="font-dec" data-page-node-id="wKTOc5wuljj5HLC1H8iNBb">A-</button><span id="font-val" style="min-width: 30px; text-align: center; font-weight: 600;" data-page-node-id="0NrsOsO68Alhv9Fpy07taW">18</span><button id="font-inc" data-page-node-id="dVkUA0nFyNvJE12MBJqgbc">A+</button></div></div>
+  <div class="setting-row" data-page-node-id="2SK4lpeK56ApqJmyawDvwj"><span class="setting-label" data-page-node-id="TosaMWCtcTXTbPHsadbcVW">繁简</span><div class="setting-btns" data-page-node-id="MdQz5LEgOHjJ6EuIMp2z6g"><button id="btn-t2s" style="padding: 4px 16px;" data-page-node-id="6AbShXc1uCZCa85CHNNPyR">繁→简</button></div></div>
+  <div class="setting-row" data-page-node-id="sly8krHBdjyDppxSu9aKY7"><span class="setting-label" data-page-node-id="HVEWn7YuCDkOZ7WzFEo3q4">行距</span><div class="setting-btns" data-page-node-id="bA7Jr6U3kBXEsluyUeKTRv"><button data-line="1.6" data-page-node-id="QgnysjDzwCInMOIhi2Ck9Q">紧凑</button><button data-line="1.9" class="active" data-page-node-id="AJGsfSYS8B5TQVDXLctPEF">适中</button><button data-line="2.2" data-page-node-id="2gFYsU6QCxsDnhQpjL0eX2">宽松</button></div></div>
+  <div class="setting-row" data-page-node-id="6kOpTXiKb4xUFj8vCah2jF"><span class="setting-label" data-page-node-id="5jCV2tzRttNMihsxvBQvQc">主题</span><div class="theme-dots" data-page-node-id="DSErsHd9G8Apb3B8OJHY1y"><div class="theme-dot" data-t="white" title="极简白" data-page-node-id="GuhAnzHW0snC46eHLZWBAC"></div><div class="theme-dot" data-t="green" title="护眼绿" data-page-node-id="SMU89satkXZr6XCMH9Wlwj"></div><div class="theme-dot" data-t="default" title="暖灰纸" data-page-node-id="QyrabLH5kheYRNCHb8PfDp"></div><div class="theme-dot" data-t="dark" title="深邃夜" data-page-node-id="ehZeQw6mDyeirFJ1wcUbJP"></div><div class="theme-dot" data-t="auto" title="自动（跟随系统）" data-page-node-id="nSlbzSNv5luEq28nXvVrPt"></div></div></div>
+  <div class="setting-row" style="justify-content: center; margin-top: 8px; margin-bottom: 0;" data-page-node-id="kiZn6wmgFAAeL4qux3MGNI"><span style="font-size: 12px; color: var(--text-secondary); opacity: 0.5;" data-page-node-id="hkrRcArHn2GVY4t0btTRo4">极简阅读器 3.2</span></div>
 </div>
 
 <!-- Auto-scroll & TTS floating bar -->
-<div id="float-bar" data-page-node-id="8u0rU6InoFkJ0Yy9i9gzF6">
-  <button class="fb-btn" id="btn-scroll" title="自动滚动" data-page-node-id="fhA1a38fD1d1DY0oQWpS63">
-    <svg class="scroll-icon-down" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="AnQzTcVcSaIpsdVAwWVpSr"><line x1="12" y1="5" x2="12" y2="19" data-page-node-id="1oDn2kFqilC2DrytQWqHdt"/><polyline points="19 12 12 19 5 12" data-page-node-id="dy2DkHzM6hd5D1uOetC56Z"/></svg>
-    <svg class="scroll-icon-stop" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:none;" data-page-node-id="l2dBYxR9BJG8oWuJuevFBU"><rect x="5" y="5" width="14" height="14" rx="2" data-page-node-id="sQsLUZFJXjkzNaR5OonxKs"/></svg>
+<div id="float-bar" data-page-node-id="7fFQydGHEnjSViPG5lcaa9">
+  <button class="fb-btn" id="btn-scroll" title="自动滚动" data-page-node-id="YvXvxWDvbaeK2O2z2NyqAJ">
+    <svg class="scroll-icon-down" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="2VFmWJCo9PLBv1lNtyEiZp"><line x1="12" y1="5" x2="12" y2="19" data-page-node-id="YqV2yQ0aTujyddrA1JQ8gk"/><polyline points="19 12 12 19 5 12" data-page-node-id="Rpdj2ujPL7wix6kihpL8e3"/></svg>
+    <svg class="scroll-icon-stop" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:none;" data-page-node-id="9I1tJHBvelCgcWdVWwHfZU"><rect x="5" y="5" width="14" height="14" rx="2" data-page-node-id="m1W0fDnFbCTrWNRNVpk6AP"/></svg>
   </button>
-  <span class="fb-speed" id="scroll-speed-label" data-page-node-id="sGwm1otZAITRadEa3UGtr8">1.0x</span>
-  <div class="fb-divider" data-page-node-id="Gwjhg0ekEUWqFM0o9Gylfb"></div>
-  <button class="fb-btn play-btn" id="btn-tts-play" title="听书" data-page-node-id="ExlDxN9A9ZYhlrHOU1LFPz">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" data-page-node-id="bNQXAYNazEDSdgDRUqJTGX"><path d="M8 5v14l11-7z" data-page-node-id="9bjezCzBkM9tsCq2CR02r4"/></svg>
+  <span class="fb-speed" id="scroll-speed-label" data-page-node-id="C443n6l0a0ZSUrDJwgdD5d">1.0x</span>
+  <div class="fb-divider" data-page-node-id="CqZJ7WGC7oS54iMZpntmYm"></div>
+  <button class="fb-btn play-btn" id="btn-tts-play" title="听书" data-page-node-id="gv1m11Gtay0d3L3Nl8IWDe">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" data-page-node-id="iDUY5QZCPJrra9oaNv5FBB"><path d="M8 5v14l11-7z" data-page-node-id="SFzhbHKYSi38bQF3gwiX3E"/></svg>
   </button>
-  <div class="fb-divider" data-page-node-id="cv7LPxKFX7FcSGg2pjAsNl"></div>
-  <button class="fb-btn" id="btn-tts-settings" title="语音设置" data-page-node-id="8ywr5Qp352URz5P1eeLueI">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="7pAAsyfoeoVNdFrhzEvJv8"><circle cx="12" cy="12" r="3" data-page-node-id="s0ugFBfPo36ZysZaIoJgIE"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" data-page-node-id="C7rs78racdwk7LS59FhXUZ"/></svg>
+  <div class="fb-divider" data-page-node-id="Dnn4odtBi689u4Qe465KN1"></div>
+  <button class="fb-btn" id="btn-tts-settings" title="语音设置" data-page-node-id="KEbS8IPZB7akccdl9gLBPa">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="RiiOdKyFZhZ4fyL5fDn8Qv"><circle cx="12" cy="12" r="3" data-page-node-id="DRvvM4qq8xGf6kYUngXYaT"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" data-page-node-id="bUYO5enHUAQ9s30UMQYSiX"/></svg>
   </button>
 </div>
 
 <!-- TTS voice settings panel -->
-<div id="drawer-tts" data-page-node-id="dQDPxpyJay0bXeJHfp95iE">
-  <div class="setting-row" data-page-node-id="NqA3aCj0ij0HGRfCO1mJum"><span class="setting-label" style="font-size: 16px; font-weight: 600;" data-page-node-id="HWoQ6OXVPlXhUQFFjwBiYL">选择音色</span></div>
-  <div class="tts-voice-grid" id="tts-voice-grid" data-page-node-id="TBgOOFxklgFDrfvb2dqetf"></div>
-  <div class="setting-row" style="margin-top: 20px;" data-page-node-id="Hk88jD6UzkyKCa9Pu6Dzub"><span class="setting-label" data-page-node-id="N3TyIkSYzs7FDcWY92hSgJ">语速</span><div class="setting-btns" data-page-node-id="aPlFIjGRlrBuHa8dwoZtFB"><button id="tts-speed-dec" data-page-node-id="wYHAFLmOt1SxHHX02Mxsqs">-</button><span id="tts-speed-val" style="min-width: 36px; text-align: center; font-weight: 600;" data-page-node-id="9jVAvtI17NFGaTNyExZmyA">1.0x</span><button id="tts-speed-inc" data-page-node-id="S8rGs2hUA6S7XKNWrxBfLG">+</button></div></div>
-  <div class="setting-row" style="margin-top: 16px;" data-page-node-id="mz7XHIyNet8H44TyfqcHE2"><span class="setting-label" data-page-node-id="ARtGV3VSBgYag2p0rGAqpO">TTS 地址</span><div class="setting-btns" data-page-node-id="kSVUn8kLk49Aqaj3w4QqGL"><input id="tts-url-input" type="text" placeholder="https://your-tts-worker.workers.dev" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;" data-page-node-id="B3fzTrad6YbHhxEPtp8YCi"></div></div>
-  <div class="setting-row" data-page-node-id="yGNxg78ktnFojFpbarD7Aq"><span class="setting-label" data-page-node-id="QZ8XSHMY2XWmWE1U4J8Y3N">TTS 密钥</span><div class="setting-btns" data-page-node-id="mGhN3xfF6kMBTMhLBCAMsM"><input id="tts-key-input" type="password" placeholder="留空则不验证" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;" data-page-node-id="8AlmnHWTqMjFyhCfaFSjfX"></div></div>
+<div id="drawer-tts" data-page-node-id="pFcWFI2aBAXJJVq8UnjjVt">
+  <div class="setting-row" data-page-node-id="58pIOP3odzBmCTIkJ6M0ar"><span class="setting-label" style="font-size: 16px; font-weight: 600;" data-page-node-id="bDpVef1dsXuoJ292fssDM3">选择音色</span></div>
+  <div class="tts-voice-grid" id="tts-voice-grid" data-page-node-id="92bSbJa5o7Hw67ejrlFQZ6"></div>
+  <div class="setting-row" style="margin-top: 20px;" data-page-node-id="b9Qvxcm2P39O3qESdCaYts"><span class="setting-label" data-page-node-id="9DSXN5vEeFHsnpaGLvmDOR">语速</span><div class="setting-btns" data-page-node-id="kEJnXkKJbGKcI7R4JieltG"><button id="tts-speed-dec" data-page-node-id="e0lHs1U581iG8pbiH3sMUP">-</button><span id="tts-speed-val" style="min-width: 36px; text-align: center; font-weight: 600;" data-page-node-id="BTrytKSkTDEaIpKw8Soe31">1.0x</span><button id="tts-speed-inc" data-page-node-id="rLawW0yGBa0ARGvKxVnsWh">+</button></div></div>
+  <div class="setting-row" style="margin-top: 16px;" data-page-node-id="nwDzeC4v55HdxUppJxEZGL"><span class="setting-label" data-page-node-id="I59KZthiDGcV7395XQFC2G">TTS 地址</span><div class="setting-btns" data-page-node-id="E1wyfkAn2ydFDJYjADLliH"><input id="tts-url-input" type="text" placeholder="https://your-tts-worker.workers.dev" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;" data-page-node-id="12O83a3U6W8iyPwquRxz8A"></div></div>
+  <div class="setting-row" data-page-node-id="sJphoi6I2XfB07VLzrKXw4"><span class="setting-label" data-page-node-id="u8DfAUOcjtQ7Yi6PcWz83W">TTS 密钥</span><div class="setting-btns" data-page-node-id="fnfzDefzEIYUJ6JfU2Yggr"><input id="tts-key-input" type="password" placeholder="留空则不验证" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;" data-page-node-id="lObXq3XIzjB4tT7kOTdx2e"></div></div>
   <!-- [Fish Audio 兼容] 临时适配，后续删除 -->
-  <div class="setting-row" data-page-node-id="QpI5HemYTPlhkApu6cxTbg"><span class="setting-label" data-page-node-id="rwqAJFDgXqyclYvHkAckFc">Fish Voice</span><div class="setting-btns" data-page-node-id="N99OFqQ4WDbFxBjxAhuwxb"><input id="tts-ref-id-input" type="text" placeholder="Fish Audio reference_id（可选）" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;" data-page-node-id="gx4yIrYOn42KCFtho5S9Qw"></div></div>
+  <div class="setting-row" data-page-node-id="PXZqAj02FaEoAHXZI6TlRX"><span class="setting-label" data-page-node-id="r327E6cNXss6OdC3xSSBZR">Fish Voice</span><div class="setting-btns" data-page-node-id="1PBU2YXBP2BWo0v4jl0c7i"><input id="tts-ref-id-input" type="text" placeholder="Fish Audio reference_id（可选）" style="width: 220px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px;" data-page-node-id="iipmAUtsRe12qscSn9vFDr"></div></div>
   <!-- [Fish Audio 兼容] 结束 -->
 </div>
 
@@ -381,16 +381,20 @@ class Utils {
         // 2) 破折号统一：—— 或 ---- → 逗号停顿（连续单个 —— 也合并）
         t = t.replace(/[-—–－_]{2,}/g, '，');
 
-        // 3) 成串装饰符号：同一个符号连续出现 2 次以上一律删除
-        //    覆盖 ★☆◆◇■□●○▲△▼▽§¤※≈≡＊*#=+~^<>|/\ 等
-        t = t.replace(/([★☆◆◇■□●○▲△▼▽♦♠♣♥♤♡▪▫◈〇※§¤~～^*=+_#|\\\/<>《》〈〉])\1{1,}/g, '');
+        // 3) 成串装饰符号：分两种形态处理
+        //    (a) 同一符号紧邻重复（★★★、====）→ 删除
+        t = t.replace(/([★☆◆◇■□●○▲△▼▽♦♠♣♥♤♡▪▫◈〇※§¤~～^*=+#|\\\/<>《》〈〉])\1{1,}/g, '');
+        //    (b) 符号之间夹空白/标点的重复串（★ ★ ★、* * * *、= = =）→ 整体删除
+        //        只处理「装饰性符号」，避免误伤 "1 2 3" 这类正常内容
+        t = t.replace(/(?:[★☆◆◇■□●○▲△▼▽♦▪▫◈※§¤*+=~～#]\s*[，、,;；]?\s*){2,}/g, '');
 
         // 4) 成对装饰括号：仅当括号内不含中文字符时整体删除，如 【★★】【= =】
         //    含中文的括注（如【重要】）保留，改由下一步处理
         t = t.replace(/[【\[〖《〔〈『「]\s*[^\u4e00-\u9fa5]{0,20}\s*[】\]〗》〕〉』」]/g, '');
 
         // 5) 残留的孤立装饰符号（单个出现，孤立无意义）→ 删除
-        t = t.replace(/[★☆◆◇■□●○▲△▼▽♦▪▫◈※§¤]/g, '');
+        //    含 * 和 = ：孤立星号/等号在中文正文中无正常语义，TTS 会念「星号」「等号」
+        t = t.replace(/[★☆◆◇■□●○▲△▼▽♦▪▫◈※§¤*=]/g, '');
 
         // 6) 常见符号转中文读音，避免 TTS 念成「符号」或直接跳过丢义
         const symbolMap = {
@@ -1568,6 +1572,7 @@ class TTSController {
         this._prefetchMap = null;
         this._playlist = [];
         this._playlistIdx = 0;
+        this._collectCursor = undefined;
         this._currentHighlightEl = null;
         this._advancing = false;
         this.ttsUrl = settings.get('ttsUrl') || '';
@@ -1603,6 +1608,8 @@ class TTSController {
         // 防止个别环境下 ended 丢失导致卡住；0.05s 的余量人耳不可闻，不会截断内容。
         this.audio.addEventListener('timeupdate', () => {
             if (!this.playing || this._advancing) return;
+            // duration 为 NaN/Infinity（切换切片瞬间）时跳过，避免误判到末尾
+            if (!isFinite(this.audio.duration)) return;
             if (this.audio.duration && this.audio.currentTime >= this.audio.duration - 0.05) {
                 if (this.playNextChunk()) return;
                 this._advancing = true;
@@ -1652,6 +1659,7 @@ class TTSController {
         this.queue = this.collectChapterText();
         if (this.queue.length === 0) { this.loading = false; this.updatePlayButton(); Toast.show('当前无可朗读内容'); return; }
         this.queueIdx = 0;
+        this._collectCursor = undefined; // 重置采集游标
         uiController.showFloatBar();
         this.playCurrent();
     }
@@ -1661,14 +1669,15 @@ class TTSController {
     }
 
     // 统一的朗读段落采集：净化 + 可朗读性过滤
+    // afterGidx=null 表示从「当前阅读位置」起采；否则采集 gidx > afterGidx 的段落
     collectSpeechItems(nodes, afterGidx) {
         const items = [];
-        let foundCurrent = false;
         for (const node of nodes) {
             const gidx = parseInt(node.dataset.gidx);
             if (afterGidx === null) {
-                if (gidx === app.currentGlobalIdx) foundCurrent = true;
-                if (!foundCurrent) continue;
+                // 起点判断用 >= 兜底：若 currentGlobalIdx 指向的段落被净化过滤掉，
+                // 仍能从其后第一段开始，避免整队列为空导致「无可朗读内容」。
+                if (gidx < app.currentGlobalIdx) continue;
             } else {
                 if (gidx <= afterGidx) continue;
             }
@@ -1735,19 +1744,33 @@ class TTSController {
             console.error('TTS error:', e);
             this.loading = false;
             Toast.show('语音合成失败: ' + (e && e.name === 'TimeoutError' ? '请求超时' : e.message));
+            // 失败时释放本段已生成的切片，避免 blob 泄漏
+            // 当前片挂在 audio.src 上，其余片在 _playlist 里，两者都要释放
+            if (this.audio.src && this.audio.src.startsWith('blob:')) URL.revokeObjectURL(this.audio.src);
+            this.audio.removeAttribute('src');
+            if (this._playlist && this._playlist.length) {
+                this._playlist.forEach((u, i) => {
+                    if (i !== this._playlistIdx) URL.revokeObjectURL(u);
+                });
+            }
+            this._playlist = [];
+            this._playlistIdx = 0;
             this.playing = false;
             this.updatePlayButton();
         }
     }
 
     // 播放当前段落切分出的下一片；返回 true 表示已接管（不应推进到下一段）
+    // 用「当前片序号是否已推进」做幂等保护：同一片重复收到 ended/timeupdate 不会跳片
     playNextChunk() {
         const urls = this._playlist || [];
         const next = (this._playlistIdx || 0) + 1;
         if (next >= urls.length) return false;
+        // 若当前 audio.src 已经不是当前片（说明已切换过），直接视为已接管
+        if (this.audio.src === urls[next]) return true;
+        if (this.audio.src !== urls[this._playlistIdx]) return true;
         if (this.audio.src.startsWith('blob:')) URL.revokeObjectURL(this.audio.src);
         this._playlistIdx = next;
-        this._advancing = false;
         this.audio.src = urls[next];
         this.audio.play().catch(() => {});
         return true;
@@ -1874,16 +1897,28 @@ class TTSController {
         if (app.loadMore) app.loadMore('bottom');
         // requestAnimationFrame 确保浏览器完成 DOM 更新后再收集文本，防止竞态
         requestAnimationFrame(() => {
-            // 如果快到队列末尾，补充后续内容
+            // 快队列末尾时补充后续内容
             if (this.queueIdx >= this.queue.length - 5) {
-                const lastGidx = this.queue.length > 0 ? this.queue[this.queue.length - 1].gidx : app.currentGlobalIdx;
-                const more = this.collectMoreText(lastGidx);
-                this.queue.push(...more);
+                this.refillQueue();
             }
             // 继续预加载下一段
             this.prefetchNext();
             this.playCurrent();
         });
+    }
+
+    // 补充队列：以「已采集到的最大 gidx」为游标，避免装饰行密集时游标不前进
+    refillQueue() {
+        if (this._collectCursor === undefined) {
+            this._collectCursor = this.queue.length > 0 ? this.queue[this.queue.length - 1].gidx : app.currentGlobalIdx;
+        }
+        let guard = 0;
+        while (this.queue.length - this.queueIdx < 10 && guard++ < 5) {
+            const more = this.collectMoreText(this._collectCursor);
+            if (more.length === 0) break;
+            this.queue.push(...more);
+            this._collectCursor = more[more.length - 1].gidx;
+        }
     }
 
     collectMoreText(afterGidx) {
@@ -1916,6 +1951,7 @@ class TTSController {
         }
         this.queue = [];
         this.queueIdx = 0;
+        this._collectCursor = undefined;
         this.clearHighlight();
         this.updatePlayButton();
         uiController.hideFloatBar();
